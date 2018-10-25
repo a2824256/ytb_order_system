@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <!-- Meta, title, CSS, favicons, etc. -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>YTB | Business login page</title>
+
+    <!-- Bootstrap -->
+    <link href="/static/vendors/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="/static/vendors/font-awesome/css/font-awesome.min.css" rel="stylesheet">
+    <!-- NProgress -->
+    <link href="/static/vendors/nprogress/nprogress.css" rel="stylesheet">
+    <!-- Animate.css -->
+    <link href="/static/vendors/animate.css/animate.min.css" rel="stylesheet">
+
+    <!-- Custom Theme Style -->
+    <link href="/static/build/css/custom.min.css" rel="stylesheet">
+
+</head>
+
+<body class="login">
+<div>
+    <a class="hiddenanchor" id="signup"></a>
+    <a class="hiddenanchor" id="signin"></a>
+
+    <div class="login_wrapper">
+        <div class="animate form login_form">
+            <section class="login_content">
+                <form>
+                    <h1>Login Form</h1>
+                    <div>
+                        <input id="account" type="text" class="form-control" placeholder="Username" required=""/>
+                    </div>
+                    <div>
+                        <input id="password" autocomplete="new-password" type="password" class="form-control"
+                               placeholder="Password" required=""/>
+                    </div>
+                    <div>
+                        <a class="btn btn-default submit" onclick="login()">Log in</a>
+                        <a class="reset_pass">If your lost password? Please contact customer service.</a>
+                    </div>
+
+                    <div class="clearfix"></div>
+
+                    <div class="separator">
+
+                        <div class="clearfix"></div>
+                        <br/>
+
+                        <div>
+                            <p>©2018 YTB All Rights Reserved.</p>
+                        </div>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </div>
+</div>
+</body>
+<script src="/static/js/common.js"></script>
+<script>
+    function login() {
+        let account = document.getElementById("account").value;
+        let password = document.getElementById("password").value;
+        let params = new Array();
+        params['account'] = account;
+        params['password'] = password;
+        let res_arr = request('{:url("business/api/login")}', params, 'POST');
+        res_arr.then((res)=>{
+            if (res.code == 1) {
+                alert(res.reason);
+                window.location.href = '{:url("business/index/main")}';
+            } else {
+                alert(res.reason);
+            }
+        });
+    }
+</script>
+</html>
