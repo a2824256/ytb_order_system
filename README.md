@@ -5,4 +5,4 @@ ThinkPHP 5.0<br>
 MySql<br>
 Restful style Api<br>
 boostrap admin<br>
-React.js client<br>
+Dva.js + React.js client<br>
