@@ -1,9 +1,10 @@
 <?php
-namespace app\common\model;
+namespace app\business\model;
 
 use think\Model;
 
-class BusinessToGoods extends Model
+class BusinessToGoodsClassifications extends Model
 {
     protected $pk = 'cid';
+    protected $autoWriteTimestamp = 'datetime';
 }
