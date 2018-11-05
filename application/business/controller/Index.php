@@ -103,4 +103,12 @@ class Index extends Controller
         $view->orders = $orders;
         return $view->fetch();
     }
+
+    public function business(){
+        $bid = Session::get('bid');
+        $info = BusinessAccount::get(['bid' => $bid])->visible(['name', 'pic', 'phone','device_id'])->toArray();
+        $view = new View();
+        $view->info = $info;
+        return $view->fetch();
+    }
 }

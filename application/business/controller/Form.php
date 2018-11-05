@@ -42,4 +42,23 @@ class Form extends Controller
             $this->error('Please login!','index/index');
         }
     }
+
+    public function updateInfo(){
+        $account = Session::get('business');
+        if(!empty($account)){
+            $cid = input('get.photo');
+            $cid = input('get.name');
+            $cid = input('get.phone');
+            $cid = input('get.device_id');
+            $cid = input('get.bid');
+            $res = BusinessToGoodsClassifications::where(['cid' => $cid])->delete();
+            if($res){
+                $this->success('Update success.','index/business');
+            }else{
+                $this->error('Update fail.');
+            }
+        }else{
+            $this->error('Please login!','index/business');
+        }
+    }
 }

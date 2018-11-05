@@ -1,0 +1,150 @@
+{include file="../application/business/view/index/header.html" /}
+
+<!-- page content -->
+<div class="right_col" role="main">
+    <div class="page-title">
+        <div class="title_left">
+            <h3>Business</h3>
+        </div>
+    </div>
+    <div class="clearfix"></div>
+    <div class="col-md-6 col-sm-12 col-xs-12">
+        <div class="x_panel">
+            <div class="x_title">
+                <h2>Business info</h2>
+                <ul class="nav navbar-right panel_toolbox">
+                    <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
+                    </li>
+                    <li><a class="close-link"><i class="fa fa-close"></i></a>
+                    </li>
+                </ul>
+                <div class="clearfix"></div>
+            </div>
+            <div class="x_content">
+                <form action='#'>
+                    <div class="form-inline form-group">
+                        <label style="width: 100px;">Photo:</label>
+                        <input id="photo" type="text" value="" class="form-control" readonly="readonly"
+                               style="width: 300px"/>
+                        <input type="button" id="image" class="btn btn-default" value="Upload"/>
+                    </div>
+                    <div class="form-inline form-group">
+                        <label style="width: 100px;">Name:</label>
+                        <input id="name" type="text" value="" class="form-control" style="width: 300px;"/>
+                    </div>
+                    <div class="form-inline form-group">
+                        <label style="width: 100px;">Phone:</label>
+                        <input id="phone" type="text" value="" class="form-control" style="width: 300px"/>
+                    </div>
+                    <div class="form-inline form-group">
+                        <label style="width: 100px;">Device ID:</label>
+                        <input id="device_id" type="text" value="" class="form-control" style="width: 300px"/>
+                    </div>
+                    <input id="bid" type="hidden" value="{$Think.session.bid}" />
+                    <input type="button" onclick="updateInfo()" class="btn btn-success" value="Submit" style="margin-left: 100px;"/>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+</div>
+</div>
+
+<!-- /page content -->
+
+
+<!-- footer content -->
+<footer style="padding-bottom: 100px">
+    <div class="pull-right">
+        Copyright ©2018 YTB
+    </div>
+    <div class="clearfix"></div>
+</footer>
+<!-- /footer content -->
+</div>
+</div>
+<script>
+    function updateInfo() {
+        let params = new Array();
+        params['photo'] = document.getElementById("photo").value;
+        params['name'] = document.getElementById("name").value;
+        params['phone'] = document.getElementById("phone").value;
+        params['device_id'] = document.getElementById("device_id").value;
+        params['bid'] = document.getElementById("bid").value;
+        console.log(params);
+        let res_arr = request('{:url("business/form/updateinfo")}', params, 'post');
+        res_arr.then((res)=>{
+            if (res.code == 1) {
+                alert(res.reason);
+                location.reload();
+            } else {
+                alert(res.reason);
+            }
+        });
+    }
+</script>
+<script src="/static/kindeditor/kindeditor-all.js"></script>
+<script src="/static/kindeditor/lang/en.js"></script>
+<script>
+    KindEditor.ready(function (K) {
+        var editor = K.editor({
+            uploadJson: '/static/kindeditor/php/upload_json.php',
+            fileManagerJson: '/static/kindeditor/php/file_manager_json.php',
+            langType: 'en',
+            allowFileManager: true
+        });
+
+        K('#image').click(function () {
+            editor.loadPlugin('image', function () {
+                editor.plugin.imageDialog({
+                    showRemote: false,
+                    imageUrl: K('#photo').val(),
+                    clickFn: function (url, title, width, height, border, align) {
+                        K('#photo').val(url);
+                        editor.hideDialog();
+                    }
+                });
+            });
+        });
+    });
+</script>
+<!-- jQuery -->
+<script src="/static/vendors/jquery/dist/jquery.min.js"></script>
+<!-- Bootstrap -->
+<script src="/static/vendors/bootstrap/dist/js/bootstrap.min.js"></script>
+<!-- FastClick -->
+<script src="/static/vendors/fastclick/lib/fastclick.js"></script>
+<!-- NProgress -->
+<script src="/static/vendors/nprogress/nprogress.js"></script>
+<!-- bootstrap-progressbar -->
+<script src="/static/vendors/bootstrap-progressbar/bootstrap-progressbar.min.js"></script>
+<!-- iCheck -->
+<script src="/static/vendors/iCheck/icheck.min.js"></script>
+<!-- bootstrap-daterangepicker -->
+<script src="/static/vendors/moment/min/moment.min.js"></script>
+<script src="/static/vendors/bootstrap-daterangepicker/daterangepicker.js"></script>
+<!-- bootstrap-wysiwyg -->
+<script src="/static/vendors/bootstrap-wysiwyg/js/bootstrap-wysiwyg.min.js"></script>
+<script src="/static/vendors/jquery.hotkeys/jquery.hotkeys.js"></script>
+<script src="/static/vendors/google-code-prettify/src/prettify.js"></script>
+<!-- jQuery Tags Input -->
+<script src="/static/vendors/jquery.tagsinput/src/jquery.tagsinput.js"></script>
+<!-- Switchery -->
+<script src="/static/vendors/switchery/dist/switchery.min.js"></script>
+<!-- Select2 -->
+<script src="/static/vendors/select2/dist/js/select2.full.min.js"></script>
+<!-- Parsley -->
+<script src="/static/vendors/parsleyjs/dist/parsley.min.js"></script>
+<!-- Autosize -->
+<script src="/static/vendors/autosize/dist/autosize.min.js"></script>
+<!-- jQuery autocomplete -->
+<script src="/static/vendors/devbridge-autocomplete/dist/jquery.autocomplete.min.js"></script>
+<!-- starrr -->
+<script src="/static/vendors/starrr/dist/starrr.js"></script>
+<!-- Custom Theme Scripts -->
+<script src="/static/build/js/custom.min.js"></script>
+
+</body>
+</html>
