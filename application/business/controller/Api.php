@@ -1,10 +1,11 @@
 <?php
 
 namespace app\business\controller;
-
 use \think\controller\Rest;
 use \app\common\model\BusinessAccount;
-use \app\business\model\BusinessToOrders;
+use \app\business\model\BusinessToOrdersGoods;
+use \app\business\model\BusinessToGoods;
+use \app\business\model\BusinessToGoodsClassifications;
 use \think\Session;
 
 class Api extends Rest
@@ -37,15 +38,51 @@ class Api extends Rest
         }
     }
 
-    public function orders()
+    public function ordersGoods()
     {
         switch ($this->method) {
-            case 'get':
+            case 'post':
 //                    $business = openssl_decrypt(base64_decode(input('get.bid')), "aes-128-cbc", config('cbc_key'), OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, config('cbc_iv'));
-                $bid = input('get.bid');
-                $orders = BusinessToOrders::get(['order_number'=>123123123]);
-                var_dump($orders);
-//                return $this->response($orders->goods(), 'json', 200);
+                $order = input('post.order');
+                $goods = BusinessToOrdersGoods::where(['order_number'=>$order])->column('gid,good_name,num,price,total_price');
+                $output_json = $this->output_json_template;
+                $output_json['status'] = 1;
+                $output_json['goods'] = $goods;
+                return $this->response($output_json, 'json', 200);
+        }
+    }
+
+    public function goods(){
+        $output_json = $this->output_json_template;
+        switch ($this->method) {
+            case 'post':
+                $good = new BusinessToGoods;
+                $good->name = input('post.name');
+                $good->price = input('post.price');
+                $good->info = input('post.info');
+                $good->cid = input('post.cid');
+                $good->pic = input('post.photo');
+                $good->bid = input('post.bid');
+                $good->create_time =  date('Y-m-d H:i:s',time());
+                if($good->save()){
+                    $output_json['status'] = 1;
+                }
+                return $this->response($output_json, 'json', 200);
+        }
+    }
+
+    public function classifications(){
+        $output_json = $this->output_json_template;
+        switch ($this->method) {
+            case 'post':
+                $class = new BusinessToGoodsClassifications;
+                $class->name = input('post.name');
+                $class->bid = input('post.bid');
+                $class->create_time =  date('Y-m-d H:i:s',time());
+                if($class->save()){
+                    $output_json['status'] = 1;
+                }
+                return $this->response($output_json, 'json', 200);
         }
     }
 }

@@ -5,84 +5,145 @@
     <div class="">
         <div class="page-title">
             <div class="title_left">
-                <h3>Form Elements</h3>
+                <h3>Orders</h3>
             </div>
 
             <div class="title_right">
                 <div class="col-md-5 col-sm-5 col-xs-12 form-group pull-right top_search">
-                    <div class="input-group">
-                        <input type="text" class="form-control" placeholder="Search for...">
-                        <span class="input-group-btn">
-                      <button class="btn btn-default" type="button">Go!</button>
+                    <form action='{:url("business/index/orders")}' method="post">
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="Search for..." name="key">
+                            <span class="input-group-btn">
+                      <button class="btn btn-default" type="submit">Go!</button>
                     </span>
-                    </div>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
         <div class="clearfix"></div>
         <div class="col-md-12 col-sm-12 col-xs-12">
-            <div class="x_panel">
-                <div class="x_title">
-                    <h2>Boardered table <small>Bordered table subtitle</small></h2>
-                    <ul class="nav navbar-right panel_toolbox">
-                        <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
-                        </li>
-                        <li><a class="close-link"><i class="fa fa-close"></i></a>
-                        </li>
-                    </ul>
-                    <div class="clearfix"></div>
-                </div>
-                <div class="x_content">
-
-                    <table class="table table-striped jambo_table">
-                        <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Order</th>
-                            <th>Date</th>
-                            <th>Status</th>
-                            <th>Amount</th>
-                            <th>Customer name</th>
-                            <th>Phone</th>
-                            <th>Action</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {volist name="orders" id="vo"}
-                        <tr>
-                            <th scope="row">{$vo.oid}</th>
-                            <td>{$vo.order_number}</td>
-                            <td>{$vo.create_time}</td>
-                            <td>{$vo.status}</td>
-                            <td>£{$vo.total_price}</td>
-                            <td>{$vo.user_name}</td>
-                            <td>{$vo.user_telephone}</td>
-                            <td><a href="#">View</a></td>
-                        </tr>
-                        </tbody>
-                        {/volist}
-                    </table>
-
-                </div>
+        <div class="x_panel">
+            <div class="x_title">
+                <h2>Orders table</h2>
+                <!--<h2>Orders table <small>Bordered table subtitle</small></h2>-->
+                <ul class="nav navbar-right panel_toolbox">
+                    <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
+                    </li>
+                    <li><a class="close-link"><i class="fa fa-close"></i></a>
+                    </li>
+                </ul>
+                <div class="clearfix"></div>
             </div>
+            <div class="x_content">
 
+                <table class="table table-striped jambo_table">
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Order</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Amount</th>
+                        <th>Customer name</th>
+                        <th>Phone</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {volist name="orders" id="vo"}
+                    <tr>
+                        <th scope="row">{$vo.oid}</th>
+                        <td>{$vo.order_number}</td>
+                        <td>{$vo.create_time}</td>
+                        <td>{$vo.status}</td>
+                        <td>£{$vo.total_price}</td>
+                        <td>{$vo.user_name}</td>
+                        <td>{$vo.user_telephone}</td>
+                        <td><a href="#" onclick="getOrdersDetail('{$vo.order_number}')">Detail</a><a
+                                style="margin-left: 30px" href="#" onclick="getOrdersDetail('{$vo.order_number}')">Print</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                    {/volist}
+                </table>
+                {$orders->render()}
+            </div>
         </div>
+
+    </div>
+
     </div>
 
 </div>
 </div>
 <!-- /page content -->
 
+<!-- order view -->
+<div class="order_detail_box"
+     style="display: none;z-index: 999;position: fixed;left: 50%;top: 50%;width: 800px;margin: -100px 0px 0px -420px;background: #e2e2e2;border-radius: 30px;padding:20px 20px;">
+    <h2>Detail</h2>
+    <div style="text-align:left">
+        <ul class="nav nav-list order_detail">
+        </ul>
+    </div>
+    <div style="text-align:center">
+        <button class="btn btn-warning" onclick="closeDiv('.order_detail_box')">Close</button>
+    </div>
+</div>
+<!-- /order view -->
+
+
 <!-- footer content -->
 <footer>
     <div class="pull-right">
-        Gentelella - Bootstrap Admin Template by <a href="https://colorlib.com">Colorlib</a>
+        Copyright ©2018 YTB
     </div>
     <div class="clearfix"></div>
 </footer>
 <!-- /footer content -->
 </div>
 </div>
+
+<!-- order view js-->
+<script src="/static/js/common.js"></script>
+<script>
+    function closeDiv(obj) {
+        $(obj).hide();
+        // $(window).unbind();
+    }
+
+    function displayDiv(obj) {
+        $(obj).show();
+    }
+
+    function getOrdersDetail(order) {
+        let params = new Array();
+        params['order'] = order;
+        let res_arr = request('{:url("business/api/ordersgoods")}', params, 'POST');
+        res_arr.then((res) => {
+            if (res.code == 1) {
+                let content = '';
+                for (var i in res.data.goods) {
+                    content = content + '<li class="divider">' +
+                        '<span>' +
+                        '<font style="margin-right:20px;">' + res.data.goods[i]['good_name'] + '</font>' +
+                        '<font style="margin-right:20px;margin-left:20px;">x' + res.data.goods[i]['num'] + '</font>' +
+                        '<font style="margin-right:20px;margin-left:20px;">price:£' + res.data.goods[i]['price'] + '</font>' +
+                        '<font style="margin-left:20px;">total price:£' + res.data.goods[i]['total_price'] + '</font>' +
+                        '</span>' +
+                        '</li>';
+                }
+                $(".order_detail").empty();
+                $(".order_detail").append(content);
+                displayDiv(".order_detail_box");
+            } else {
+                alert(res.reason);
+            }
+        });
+    }
+</script>
+<!-- /order view js-->
 
 <!-- jQuery -->
 <script src="/static/vendors/jquery/dist/jquery.min.js"></script>

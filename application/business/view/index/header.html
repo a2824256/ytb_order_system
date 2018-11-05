@@ -18,6 +18,7 @@
     <link href="/static/vendors/nprogress/nprogress.css" rel="stylesheet">
     <!-- iCheck -->
     <link href="/static/vendors/iCheck/skins/flat/green.css" rel="stylesheet">
+    <link href="/static/kindeditor/themes/default.css" rel="stylesheet">
 
     <!-- bootstrap-progressbar -->
     <link href="/static/vendors/bootstrap-progressbar/css/bootstrap-progressbar-3.3.4.min.css" rel="stylesheet">
@@ -77,16 +78,16 @@
                             </li>
                             <li><a><i class="fa fa-table"></i> Goods <span class="fa fa-chevron-down"></span></a>
                                 <ul class="nav child_menu">
-                                    <li><a href="tables.html">Manage goods</a></li>
-                                    <li><a href="tables_dynamic.html">Manage classifications</a></li>
+                                    <li><a href='{:url("business/index/goods")}'>Manage goods</a></li>
+                                    <li><a href='{:url("business/index/classifications")}'>Manage classifications</a></li>
                                 </ul>
                             </li>
-                            <li><a><i class="fa fa-bar-chart-o"></i> Report Statistics <span
-                                    class="fa fa-chevron-down"></span></a>
-                                <ul class="nav child_menu">
-                                    <li><a href="chartjs.html">Sales</a></li>
-                                </ul>
-                            </li>
+                            <!--<li><a><i class="fa fa-bar-chart-o"></i> Report Statistics <span-->
+                                    <!--class="fa fa-chevron-down"></span></a>-->
+                                <!--<ul class="nav child_menu">-->
+                                    <!--<li><a href="chartjs.html">Sales</a></li>-->
+                                <!--</ul>-->
+                            <!--</li>-->
                         </ul>
                     </div>
                     <div class="menu_section">
@@ -96,6 +97,7 @@
                                     class="fa fa-chevron-down"></span></a>
                                 <ul class="nav child_menu">
                                     <li><a href="e_commerce.html">Info</a></li>
+                                    <li><a href="e_commerce.html">Printer</a></li>
                                 </ul>
                             </li>
                         </ul>
