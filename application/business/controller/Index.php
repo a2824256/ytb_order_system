@@ -49,16 +49,16 @@ class Index extends Controller
         $bid = Session::get('bid');
         $key = input('post.key');
         $orders = null;
-        if (!empty($key)){
-            $goods = BusinessToGoods::where('name','like','%'.$key.'%')
-                ->whereOr('price','like','%'.$key.'%')
+        if (!empty($key)) {
+            $goods = BusinessToGoods::where('name', 'like', '%' . $key . '%')
+                ->whereOr('price', 'like', '%' . $key . '%')
                 ->field('gid,name,price,info,cid,pic')
                 ->paginate(10);
-        }else{
+        } else {
             $goods = BusinessToGoods::where(['bid' => $bid])->field('gid,name,price,info,cid,pic')->paginate(10);
         }
         $class = BusinessToGoodsClassifications::where(['bid' => $bid])->column('cid,name');
-        foreach ($goods as $key => $value){
+        foreach ($goods as $key => $value) {
             $goods[$key]['cid'] = $class[$value['cid']];
         }
         $view = new View();
@@ -72,9 +72,9 @@ class Index extends Controller
         $bid = Session::get('bid');
         $key = input('post.key');
         $class = null;
-        if (!empty($key)){
-            $class = BusinessToGoodsClassifications::where('name','like','%'.$key.'%')->field('cid,name')->paginate(10);
-        }else{
+        if (!empty($key)) {
+            $class = BusinessToGoodsClassifications::where('name', 'like', '%' . $key . '%')->field('cid,name')->paginate(10);
+        } else {
             $class = BusinessToGoodsClassifications::where(['bid' => $bid])->field('cid,name')->paginate(10);
         }
         $view = new View();
@@ -87,16 +87,16 @@ class Index extends Controller
         $bid = Session::get('bid');
         $key = input('post.key');
         $orders = null;
-        if (!empty($key)){
-            $orders = BusinessToOrders::where('order_number','like','%'.$key.'%')
-                ->whereOr('total_price','like','%'.$key.'%')
-                ->whereOr('user_name','like','%'.$key.'%')
-                ->whereOr('user_post_code','like','%'.$key.'%')
-                ->whereOr('user_telephone','like','%'.$key.'%')
-                ->whereOr('user_address','like','%'.$key.'%')
+        if (!empty($key)) {
+            $orders = BusinessToOrders::where('order_number', 'like', '%' . $key . '%')
+                ->whereOr('total_price', 'like', '%' . $key . '%')
+                ->whereOr('user_name', 'like', '%' . $key . '%')
+                ->whereOr('user_post_code', 'like', '%' . $key . '%')
+                ->whereOr('user_telephone', 'like', '%' . $key . '%')
+                ->whereOr('user_address', 'like', '%' . $key . '%')
                 ->field('oid,order_number,total_price,status,user_name,user_telephone,create_time')
                 ->paginate(10);
-        }else{
+        } else {
             $orders = BusinessToOrders::where(['bid' => $bid])->field('oid,order_number,total_price,status,user_name,user_telephone,create_time')->paginate(10);
         }
         $view = new View();
@@ -104,9 +104,10 @@ class Index extends Controller
         return $view->fetch();
     }
 
-    public function business(){
+    public function business()
+    {
         $bid = Session::get('bid');
-        $info = BusinessAccount::get(['bid' => $bid])->visible(['name', 'pic', 'phone','device_id'])->toArray();
+        $info = BusinessAccount::where(['bid' => $bid])->field('name,pic,phone,device_id')->find();
         $view = new View();
         $view->info = $info;
         return $view->fetch();

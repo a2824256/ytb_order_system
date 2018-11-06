@@ -133,7 +133,7 @@
 <script>
     function deleteGood(id) {
         if (confirm('Confirm deletion?')) {
-            let url = '{:url("business/form/deleteGood")},"?gid=")}';
+            let url = '{:url("business/form/deleteGood"),"?gid="}';
             location.href = url + id;
         } else {
             return;

@@ -1,6 +1,7 @@
 <?php
 
 namespace app\business\controller;
+
 use \think\controller\Rest;
 use \app\common\model\BusinessAccount;
 use \app\business\model\BusinessToOrdersGoods;
@@ -44,7 +45,7 @@ class Api extends Rest
             case 'post':
 //                    $business = openssl_decrypt(base64_decode(input('get.bid')), "aes-128-cbc", config('cbc_key'), OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, config('cbc_iv'));
                 $order = input('post.order');
-                $goods = BusinessToOrdersGoods::where(['order_number'=>$order])->column('gid,good_name,num,price,total_price');
+                $goods = BusinessToOrdersGoods::where(['order_number' => $order])->column('gid,good_name,num,price,total_price');
                 $output_json = $this->output_json_template;
                 $output_json['status'] = 1;
                 $output_json['goods'] = $goods;
@@ -52,7 +53,8 @@ class Api extends Rest
         }
     }
 
-    public function goods(){
+    public function goods()
+    {
         $output_json = $this->output_json_template;
         switch ($this->method) {
             case 'post':
@@ -63,26 +65,60 @@ class Api extends Rest
                 $good->cid = input('post.cid');
                 $good->pic = input('post.photo');
                 $good->bid = input('post.bid');
-                $good->create_time =  date('Y-m-d H:i:s',time());
-                if($good->save()){
+                $good->create_time = date('Y-m-d H:i:s', time());
+                if ($good->save()) {
                     $output_json['status'] = 1;
                 }
                 return $this->response($output_json, 'json', 200);
         }
     }
 
-    public function classifications(){
+    public function classifications()
+    {
         $output_json = $this->output_json_template;
         switch ($this->method) {
             case 'post':
                 $class = new BusinessToGoodsClassifications;
                 $class->name = input('post.name');
                 $class->bid = input('post.bid');
-                $class->create_time =  date('Y-m-d H:i:s',time());
-                if($class->save()){
+                $class->create_time = date('Y-m-d H:i:s', time());
+                if ($class->save()) {
                     $output_json['status'] = 1;
                 }
                 return $this->response($output_json, 'json', 200);
+        }
+    }
+
+    public function updateInfo()
+    {
+        $output_json = $this->output_json_template;
+        switch ($this->method) {
+            case 'post':
+                $content = [];
+                if (input('?post.photo')) {
+                    $content = [
+                        'pic' => input('post.photo'),
+                        'name' => input('post.name'),
+                        'phone' => input('post.phone'),
+                        'device_id' => input('post.device_id'),
+                    ];
+                } else {
+                    $content = [
+                        'name' => input('post.name'),
+                        'phone' => input('post.phone'),
+                        'device_id' => input('post.device_id'),
+                    ];
+                }
+                $business = new BusinessAccount();
+                $res = $business->where('bid',input('post.bid'))->update($content);
+                if ($res) {
+                    Session::set('pic', input('post.photo'));
+                    $output_json['status'] = 1;
+                    return $this->response($output_json, 'json', 200);
+                } else {
+                    $output_json['res'] = input('post.bid');
+                    return $this->response($output_json, 'json', 200);
+                }
         }
     }
 }
