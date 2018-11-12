@@ -58,13 +58,25 @@ class Api extends Rest
         $output_json = $this->output_json_template;
         switch ($this->method) {
             case 'post':
+                if (!is_numeric(input('post.price'))) {
+                    $output_json['status'] = 3;
+                    return $this->response($output_json, 'json', 200);
+                }
+                if (!input('?post.name')) {
+                    $output_json['status'] = 4;
+                    return $this->response($output_json, 'json', 200);
+                }
+                if (!input('?post.price')) {
+                    $output_json['status'] = 4;
+                    return $this->response($output_json, 'json', 200);
+                }
                 $good = new BusinessToGoods;
-                $good->name = input('post.name');
-                $good->price = input('post.price');
-                $good->info = input('post.info');
-                $good->cid = input('post.cid');
-                $good->pic = input('post.photo');
-                $good->bid = input('post.bid');
+                $good->name = input('?post.name') ? input('post.name') : '';
+                $good->price = input('?post.price') ? input('post.price') : 0;
+                $good->info = input('?post.info') ? input('post.info') : '';
+                $good->cid = input('?post.cid') ? input('post.cid') : 0;
+                $good->pic = input('?post.photo') ? input('post.photo') : '';
+                $good->bid = input('?post.bid') ? input('post.bid') : 0;
                 $good->create_time = date('Y-m-d H:i:s', time());
                 if ($good->save()) {
                     $output_json['status'] = 1;
@@ -110,7 +122,7 @@ class Api extends Rest
                     ];
                 }
                 $business = new BusinessAccount();
-                $res = $business->where('bid',input('post.bid'))->update($content);
+                $res = $business->where('bid', input('post.bid'))->update($content);
                 if ($res) {
                     Session::set('pic', input('post.photo'));
                     $output_json['status'] = 1;
