@@ -13,6 +13,7 @@ class BusinessToOrders extends Model
     }
     public function getStatusAttr($value)
     {
+        //TODO 字段需调整
         $status = [0=>'User canceled.',1=>'Business confirmed.',2=>'Business canceled.',3=>'Completed.'];
         return $status[$value];
     }
