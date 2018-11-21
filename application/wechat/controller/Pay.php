@@ -9,16 +9,19 @@
 namespace app\wechat\controller;
 
 use app\wechat\model\BusinessToOrders;
+use think\Controller;
+use think\Db;
 use think\Loader;
 use think\controller\Rest;
+use think\Request;
 
-class Pay extends Rest
+class Pay extends Controller
 {
 
     /**
      * @var string 支付回调地址
      */
-    private $notifyUrl = 'http://www.risplan.xyz/project_haircut/Home/Pay/notify';
+    private $notifyUrl = 'http://www.szfengyuecheng.com/wechat/pay/notify';
 
     /**
      * @var string 订单详情数据
@@ -50,14 +53,13 @@ class Pay extends Rest
      * 支付界面
      */
     public function getPayOrder(){
-        if($this->method !== 'get'){
+        if(!Request::instance()->isGet()){
             exit('请求方式错误');
         }
         $orderId = input('get.orderId');
         $this->checkParams($orderId);
         $this->getParams();
-        $this->assign("jsApiParameters",$this->jsApiParameters);
-        $this->display('pay');
+        return $this->fetch('pay', ['jsApiParameters'=>$this->jsApiParameters,'successPayUrl' => 'www1','cancelUrl'=>'www2']);
     }
 
     /**
@@ -68,9 +70,19 @@ class Pay extends Rest
             exit('订单ID不能为空');
 
         $order = $this->_businessToOrders->getModelByOrderId($orderId);
+        $order->total_price = '999999999999999999999';
+        try{
+            if(!$order->save()){
+                var_dump($order->getError());
+            }
+        }catch (\Exception $e){
+            var_dump($e->getMessage());
+            die;
+
+        }
+
         if(!$order)
             exit('订单不存在，请检查订单号码是否有误');
-
         $this->order = $order;
     }
 
@@ -130,6 +142,9 @@ class Pay extends Rest
         $this->jsApiParameters = $jsApi->getParameters();
     }
 
+    /**
+     * 支付回调接口
+     */
     public function notify()
     {
         //使用通用通知接口
@@ -158,49 +173,61 @@ class Pay extends Rest
         //以log文件形式记录回调信息
 
         /* $log_name= __ROOT__."/Public/notify_url.log";//log文件路径
-         log_result($log_name,"【接收到的notify通知】:\n".$xml."\n");*/
+         self::logResult($log_name,"【接收到的notify通知】:\n".$xml."\n");*/
 
         if($notify->checkSign() == TRUE)
         {
             if ($notify->data["return_code"] == "FAIL") {
                 //此处应该更新一下订单状态，商户自行增删操作
-                log_result("【通信出错】:".$xml);
+                self::logResult("【通信出错】:".$xml);
             }
             elseif($notify->data["result_code"] == "FAIL"){
                 //此处应该更新一下订单状态，商户自行增删操作
-                log_result("【业务出错】:".$xml);
+                self::logResult("【业务出错】:".$xml);
             }
             else{
                 $orderNo = $notify->data['out_trade_no'];
-
-                $order = M('h_order')->where(['order_id' => $orderNo])->find();
-                $todaystart = mktime(00, 00, 00, date('m'), date('d'), date('Y'));
-                $todayend = mktime(23, 59, 59, date('m'), date('d'), date('Y'));
-                $last_sort = M("h_queue")->where("createtime > {$todaystart} AND createtime <= {$todayend}")->order('createtime desc')->getField('today_sort');
-
-                if($order['flag'] == 0){
-                    $data['uid'] = $order['uid'];
-                    $data['order_id'] = $orderNo;
-                    $data['createtime'] = time();
-                    $data['today_sort'] = intval($last_sort + 1);
-                    $order['goods_info'] = json_decode($order['goods_info'],true);
-                    $total_time = 0;
-                    foreach($order['goods_info'] as $val){
-                        $total_time += $val['need_time'];
+                $this->checkParams($orderNo);
+                if($this->order->status == 0){
+                    //如果订单未支付则进入此逻辑
+                    Db::transaction();
+                    try{
+                        $this->order->status = 1;
+                        if(!$this->order->save()){
+                            throw new \Exception("openid:{$this->order->openid},error:{$this->order->getError()}");
+                        }
+                        //此处应该更新一下订单状态，商户自行增删操作
+                        self::logResult("【支付成功】:".$xml);
+                        Db::commit();
+                    }catch(\Exception $e){
+                        Db::rollback();
+                        self::logResult("【异常报错信息】:".$e->getMessage());
                     }
-                    $data['all_need_time'] = $total_time;
-                    M("h_queue")->add($data);
-                    M("h_order")->where(['order_id' => $orderNo])->save(['flag' => 1]);
-                    //此处应该更新一下订单状态，商户自行增删操作
-                    log_result("【支付成功】:".$xml);
                 }
             }
-
             //商户自行增加处理流程,
             //例如：更新订单状态
             //例如：数据库操作
             //例如：推送支付完成信息
         }
+    }
+
+    /**
+     * 写入支付日志
+     * @param $text 响应文本
+     */
+    public static function logResult($text){
+        $date = date('Ym');
+        $filePath = __DIR__.'/../log/'.$date.'_pay_log.txt';
+        if(!file_exists($filePath)){
+            $fp = fopen($filePath, "w") or die("Unable to open file!");
+        }else{
+            $fp = fopen($filePath, "a") or die("Unable to open file!");
+        }
+        $json = json_encode($text,JSON_UNESCAPED_UNICODE)."\n";
+        fwrite($fp, $json);
+        fclose($fp);
+        exit;
     }
 
 

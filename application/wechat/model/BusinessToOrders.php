@@ -16,11 +16,7 @@ class BusinessToOrders extends Model
      * 获取订单实例
      */
     public function getModelByOrderId($orderId){
-        return BusinessToOrders::where(['order_number' => $orderId])->find();
-    }
-
-    public function RelationUser(){
-        return $this->hasOne('user','id','uid')->field('openid');
+        return BusinessToOrders::join('user','user.uid = business_to_orders.uid')->where(['order_number' => $orderId])->find();
     }
 
 }
