@@ -3,7 +3,7 @@
 <head>
     <meta http-equiv="content-type" content="text/html;charset=utf-8"/>
     <title>微信安全支付</title>
-
+    <script src="http://res.wx.qq.com/open/js/jweixin-1.0.0.js"></script>
 	<script type="text/javascript">
 
 		//调用微信JS api 支付
@@ -11,22 +11,20 @@
 		{
 			WeixinJSBridge.invoke(
 				'getBrandWCPayRequest',
-				<?php echo $jsApiParameters; ?>,
+                {$data.jsApiParameters},
 				function(res){
 					WeixinJSBridge.log(res.err_msg);
 					//取消支付
 					if(res.err_msg == 'get_brand_wcpay_request:cancel'){
-					    location.href = "{$cancelUrl}";
+					    location.href = "{$data.cancelUrl}";
 					}
 					
 					//支付成功回调
 					if(res.err_msg == 'get_brand_wcpay_request:ok'){
-						location.href = "{$successPayUrl}";
+						location.href = "{$data.successPayUrl}";
 					}
 					
-					
-					//alert(res.err_code+"/"+res.err_desc+"/"+res.err_msg);
-					//alert("{$jsApiParameters}");
+					// alert(res.err_code+"/"+res.err_desc+"/"+res.err_msg);
 				}
 			);
 		}
