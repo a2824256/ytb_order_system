@@ -7,7 +7,6 @@
  */
 
 namespace app\wechat\controller;
-
 use \think\controller\Rest;
 use \think\Response;
 use \app\common\model\BusinessAccount;
