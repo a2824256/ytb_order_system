@@ -70,17 +70,6 @@ class Pay extends Controller
             exit('订单ID不能为空');
 
         $order = $this->_businessToOrders->getModelByOrderId($orderId);
-        $order->total_price = '999999999999999999999';
-        try{
-            if(!$order->save()){
-                var_dump($order->getError());
-            }
-        }catch (\Exception $e){
-            var_dump($e->getMessage());
-            die;
-
-        }
-
         if(!$order)
             exit('订单不存在，请检查订单号码是否有误');
         $this->order = $order;
