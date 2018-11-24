@@ -218,7 +218,7 @@ class Pay extends Controller
      */
     public static function logResult($text){
         $date = date('Ym');
-        $filePath = __DIR__.'/../log/'.$date.'_pay_log.txt';
+        $filePath = __DIR__.'/../log/pay_log_'.$date.'.txt';
         if(!file_exists($filePath)){
             $fp = fopen($filePath, "w") or die("Unable to open file!");
         }else{
