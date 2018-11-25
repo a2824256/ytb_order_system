@@ -134,6 +134,14 @@ class Api extends Rest
      * 结算接口
      */
     public function settlement(){
+        if(!Session::has('wechat_user')){
+            return json(['errcode' => -1,'errmsg' => 'Loss of authorization information']);
+        }
+
+        if($this->method != 'post'){
+            return json(['errcode' => -2,'errmsg' => 'Incorrect request method']);
+        }
+
         $params = [
             'bid' => trim(input('post.bid')),
             'goods' => json_decode(input('post.goods'),true),
@@ -142,10 +150,6 @@ class Api extends Rest
             'address' => trim(input('post.address')),
             'post_code' => trim(input('post.post_code')),
         ];
-
-        if(!Session::has('wechat_user')){
-            return json(['errcode' => -1,'errmsg' => '授权信息丢失']);
-        }
 
         if(!empty($params['goods']) && is_array($params['goods'])){
             try{
@@ -191,7 +195,7 @@ class Api extends Rest
                 return json(['errcode' => 0,'errmsg' => 'ok','orderId' => $orderNumber]);
             }catch (\Exception $e){
                 Db::rollback();
-                return json(['errcode' => -1,'errmsg' => $e->getMessage()]);
+                return json(['errcode' => -3,'errmsg' => $e->getMessage()]);
             }
         }
 
