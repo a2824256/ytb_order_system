@@ -105,4 +105,40 @@ class Api extends Rest
                 return Response::create($final_json, 'json', 200,$this->header);
         }
     }
+
+    public function getShoppingCartInfo(){
+        switch ($this->method) {
+            case 'post':
+                $json_array = json_decode(input('post.json'),true);
+                $final_json = $this->output_json_template;
+                return Response::create($final_json, 'json', 200,$this->header);
+        }
+    }
+//  type表示是否要返回除总价之外的其他信息,返回数据类型array
+    private function caculateTotalPrice($json_array,$type = false){
+        $goods_key = [];
+//        将商品主键放到一个数组给模型直接获取
+        foreach ($json_array as $key => $value){
+            $goods_key[] = $key;
+        }
+//        获取所有商品信息
+        $goods_info = BusinessToGoods::all($goods_key);
+        $total_price = 0;
+//        返回给前端查的商品list
+        $goods_list = [];
+        foreach ($goods_info as $key=>$value){
+            if(isset($json_array[$value['gid']])){
+                $total_price += $value['price'] * $json_array[$value['gid']];
+                if ($type){
+                    $goods_list[$value['gid']] = ['name'=>$value['name'],'num'=>$json_array[$value['gid']]];
+                }
+            }
+        }
+//        结果
+        $res['total_price'] = $total_price;
+        if($type){
+            $res['goods_list'] = $goods_list;
+        }
+        return $res;
+    }
 }
