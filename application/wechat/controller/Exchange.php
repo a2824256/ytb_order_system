@@ -48,7 +48,6 @@ class Exchange extends Controller
         $result = json_decode($result,true);
             if($result['error_code'] === 0){
                 //兑换数组
-                var_dump($this->_currency);die;
                 foreach($result['result'] as $val){
                     $Currency = $this->_currency->getDetailByFromAndTo($from,$to);
                     if($Currency){
