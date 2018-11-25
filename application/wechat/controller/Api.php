@@ -151,7 +151,7 @@ class Api extends Rest
             try{
                 Db::transaction();
                 //英镑汇率
-                $currency = $this->_businessCurrency->getDetailByFromAndTo('GBP','CNY');
+                $Currency = $this->_businessCurrency->getDetailByFromAndTo('GBP','CNY');
                 //订单编号
                 $orderNumber = '201801010101';
                 //订单记录表
@@ -177,8 +177,8 @@ class Api extends Rest
                 $BusinessToOrder->order_number = $orderNumber;
                 $BusinessToOrder->uid = $User->uid;
                 $BusinessToOrder->total_price = $this->caculateTotalPrice($params['goods']);
-                $BusinessToOrder->total_price_chy = bcmul($BusinessToOrder->total_price,$currency->result);
-                $BusinessToOrder->exchange_rate = $currency->result;
+                $BusinessToOrder->total_price_chy = bcmul($BusinessToOrder->total_price,$Currency->result);
+                $BusinessToOrder->exchange_rate = $Currency->result;
                 $BusinessToOrder->user_name = $params['name'];
                 $BusinessToOrder->user_telephone = $params['telephone'];
                 $BusinessToOrder->user_address = $params['address'];

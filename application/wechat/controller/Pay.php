@@ -8,6 +8,7 @@
 
 namespace app\wechat\controller;
 
+use app\wechat\model\BusinessCurrency;
 use app\wechat\model\BusinessToOrders;
 use think\Controller;
 use think\Db;
@@ -35,15 +36,21 @@ class Pay extends Controller
     private $jsApiParameters = [];
 
     /**
-     * @var string 订单表实例
+     * @var object 订单表实例
      */
     private $_businessToOrders;
 
     /**
+     * @var object 汇率表实例
+     */
+    private $_businessCurrency;
+
+    /**
      * 初始化
      */
-    public function __construct(BusinessToOrders $businessToOrders)
+    public function __construct(BusinessToOrders $businessToOrders,BusinessCurrency $businessCurrency)
     {
+        $this->_businessCurrency = $businessCurrency;
         $this->_businessToOrders = $businessToOrders;
         //引入WxPayPubHelper
         Loader::import('WxPayPubHelper/WxPayPubHelper');
@@ -84,6 +91,15 @@ class Pay extends Controller
      */
      private function getParams()
     {
+        //获得英镑汇率
+        $Currency = $this->_businessCurrency->getDetailByFromAndTo('GBP','CNY');
+        //最终汇率
+        $rate = bcadd($Currency->result,0.15);
+        //金额向上取整单位（元）
+        $total_price = ceil(bcmul($this->order->total_price,$rate));
+        //化为分
+        $total_price = $total_price * 100;
+
         //使用jsapi接口
         try{
             $jsApi = new \JsApi_pub();
@@ -117,7 +133,7 @@ class Pay extends Controller
             //自定义订单号，此处仅作举例
 
             $unifiedOrder->setParameter("out_trade_no",$this->order->order_number);//商户订单号
-            $unifiedOrder->setParameter("total_fee", $this->order->total_price);//总金额
+            $unifiedOrder->setParameter("total_fee", $total_price);//总金额
             $unifiedOrder->setParameter("notify_url",$this->notifyUrl);//通知地址
             $unifiedOrder->setParameter("trade_type","JSAPI");//交易类型
             //非必填参数，商户可根据实际情况选填
