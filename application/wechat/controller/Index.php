@@ -28,6 +28,21 @@ class Index extends Controller
         return $view->fetch();
     }
 
+    /**
+     * 获取微信信息接口
+     */
+    public function getWechatInfo(){
+        $uid = input('get.uid');
+        if(!$uid){
+            return json(['errcode' => -1,'errmsg' => 'uid不能为空']);
+        }
+        $user = User::get($uid);
+        return json($user);
+    }
+
+    /**
+     * Oauth2.0微信授权
+     */
     public function wechatOauth(){
         $config = [
             'app_id' => 'wx007296fc9a7d315f',
@@ -49,9 +64,9 @@ class Index extends Controller
 // 已经登录过
         $user = Session::get('wechat_user');
         //近期授权过，但是数据库未存有用户信息
-        $this->saveData($user);
+        $uid = $this->saveData($user);
         //用户首页
-        header("Location: http://business.szfengyuecheng.com?openid={$user['id']}");
+        header("Location: http://business.szfengyuecheng.com?uid={$uid}");
         exit();
     }
 
@@ -67,10 +82,10 @@ class Index extends Controller
 // 获取 OAuth 授权结果用户信息
         $user = $oauth->user();
         Session::set('wechat_user',$user->toArray());
-        $this->saveData($user->toArray());
+        $uid = $this->saveData($user->toArray());
 
 //        $targetUrl = empty($_SESSION['target_url']) ? '/' : $_SESSION['target_url'];
-        header("Location: http://business.szfengyuecheng.com?openid={$user->id}");
+        header("Location: http://business.szfengyuecheng.com?uid={$uid}");
         exit();
     }
 
@@ -86,11 +101,14 @@ class Index extends Controller
             $User->headimgurl = $user['avatar'];
             $User->create_time = date('Y-m-d H:i:s');
             $User->save();
+            $uid = $User->getLastInsID();
         }else{
             $weiXinInfo->user_name = $user['nickname'];
             $weiXinInfo->headimgurl = $user['avatar'];
             $weiXinInfo->save();
+            $uid = $weiXinInfo['uid'];
         }
+        return $uid;
     }
 
 }
