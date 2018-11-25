@@ -9,7 +9,7 @@
 namespace app\wechat\controller;
 
 
-use app\wechat\model\Currency;
+use app\wechat\model\BusinessCurrency;
 use think\Controller;
 
 class Exchange extends Controller
@@ -28,11 +28,11 @@ class Exchange extends Controller
     /**
      * 兑换表实例
      */
-    private $_currency;
+    private $_businessCurrency;
 
-    public function __construct(Currency $currency)
+    public function __construct(BusinessCurrency $businessCurrency)
     {
-        $this->_currency = $currency;
+        $this->_businessCurrency = $businessCurrency;
     }
 
     /**
@@ -49,28 +49,28 @@ class Exchange extends Controller
             if($result['error_code'] === 0){
                 //兑换数组
                 foreach($result['result'] as $val){
-                    $Currency = $this->_currency->getDetailByFromAndTo($from,$to);
-                    if($Currency){
-                        $Currency->currencyf = $val['currencyF'];
-                        $Currency->currencyf_name = $val['currencyF_Name'];
-                        $Currency->currencyt = $val['currencyT'];
-                        $Currency->currencyt_name = $val['currencyT_Name'];
-                        $Currency->currencyfd = $val['currencyFD'];
-                        $Currency->exchange = $val['exchange'];
-                        $Currency->result = $val['result'];
-                        $Currency->updateTime = $val['updateTime'];
-                        $Currency->save();
+                    $BusinessCurrency = $this->_businessCurrency->getDetailByFromAndTo($val['currencyF'],$val['currencyT']);
+                    if($BusinessCurrency){
+                        $BusinessCurrency->currencyf = $val['currencyF'];
+                        $BusinessCurrency->currencyf_name = $val['currencyF_Name'];
+                        $BusinessCurrency->currencyt = $val['currencyT'];
+                        $BusinessCurrency->currencyt_name = $val['currencyT_Name'];
+                        $BusinessCurrency->currencyfd = $val['currencyFD'];
+                        $BusinessCurrency->exchange = $val['exchange'];
+                        $BusinessCurrency->result = $val['result'];
+                        $BusinessCurrency->update_time = $val['updateTime'];
+                        $BusinessCurrency->save();
                     }else{
-                        $Currency = new Currency();
-                        $Currency->currencyf = $val['currencyF'];
-                        $Currency->currencyf_name = $val['currencyF_Name'];
-                        $Currency->currencyt = $val['currencyT'];
-                        $Currency->currencyt_name = $val['currencyT_Name'];
-                        $Currency->currencyfd = $val['currencyFD'];
-                        $Currency->exchange = $val['exchange'];
-                        $Currency->result = $val['result'];
-                        $Currency->updateTime = $val['updateTime'];
-                        $Currency->save();
+                        $BusinessCurrency = new BusinessCurrency();
+                        $BusinessCurrency->currencyf = $val['currencyF'];
+                        $BusinessCurrency->currencyf_name = $val['currencyF_Name'];
+                        $BusinessCurrency->currencyt = $val['currencyT'];
+                        $BusinessCurrency->currencyt_name = $val['currencyT_Name'];
+                        $BusinessCurrency->currencyfd = $val['currencyFD'];
+                        $BusinessCurrency->exchange = $val['exchange'];
+                        $BusinessCurrency->result = $val['result'];
+                        $BusinessCurrency->update_time = $val['updateTime'];
+                        $BusinessCurrency->save();
                     }
                 }
             }
