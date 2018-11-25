@@ -34,7 +34,7 @@ class Index extends Controller
     public function getWechatInfo(){
         $uid = input('get.uid');
         if(!$uid){
-            return json(['errcode' => -1,'errmsg' => 'uid不能为空']);
+            return json(['errcode' => -1,'errmsg' => 'uid is not empty']);
         }
         $user = User::get($uid);
         return json($user);

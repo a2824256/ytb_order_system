@@ -55,7 +55,7 @@ class Pay extends Controller
      */
     public function getPayOrder(){
         if(!Request::instance()->isGet()){
-            exit('请求方式错误');
+            exit('error method!');
         }
         $orderId = input('get.orderId');
         $this->checkParams($orderId);
@@ -71,11 +71,11 @@ class Pay extends Controller
      */
     private function checkParams($orderId){
         if(empty($orderId))
-            exit('订单ID不能为空');
+            exit('orderId is not empty');
 
         $order = $this->_businessToOrders->getModelByOrderId($orderId);
         if(!$order)
-            exit('订单不存在，请检查订单号码是否有误');
+            exit('The order does not exist, please check if the order number is incorrect.');
         $this->order = $order;
     }
 

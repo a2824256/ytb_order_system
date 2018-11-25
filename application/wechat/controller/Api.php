@@ -7,12 +7,17 @@
  */
 
 namespace app\wechat\controller;
+use app\wechat\model\BusinessCurrency;
+use app\wechat\model\BusinessToOrders;
+use app\wechat\model\BusinessToOrdersGoods;
 use \think\controller\Rest;
+use think\Db;
 use \think\Response;
 use \app\common\model\BusinessAccount;
 use \app\wechat\model\User;
 use \app\business\model\BusinessToGoods;
 use \app\business\model\BusinessToGoodsClassifications;
+use think\Session;
 
 class Api extends Rest
 {
@@ -20,6 +25,25 @@ class Api extends Rest
     private $output_json_template = [
         'status' => 0
     ];
+
+    /**
+     * 兑换表实例
+     */
+    private $_businessCurrency;
+
+    /**
+     * 用户表实例
+     */
+    private $_user;
+
+    /**
+     * 初始化
+     */
+    public function __construct(BusinessCurrency $businessCurrency,User $user)
+    {
+        $this->_user = $user;
+        $this->_businessCurrency = $businessCurrency;
+    }
 
     public function businessList()
     {
@@ -104,6 +128,73 @@ class Api extends Rest
 
                 return Response::create($final_json, 'json', 200,$this->header);
         }
+    }
+
+    /**
+     * 结算接口
+     */
+    public function settlement(){
+        $params = [
+            'bid' => trim(input('post.bid')),
+            'goods' => json_decode(input('post.goods'),true),
+            'name' => trim(input('post.name')),
+            'telephone' => trim(input('post.telephone')),
+            'address' => trim(input('post.address')),
+            'post_code' => trim(input('post.post_code')),
+        ];
+
+        if(!Session::has('wechat_user')){
+            return json(['errcode' => -1,'errmsg' => '授权信息丢失']);
+        }
+
+        if(!empty($params['goods']) && is_array($params['goods'])){
+            try{
+                Db::transaction();
+                //英镑汇率
+                $currency = $this->_businessCurrency->getDetailByFromAndTo('GBP','CNY');
+                //订单编号
+                $orderNumber = '201801010101';
+                //订单记录表
+                foreach($params['goods'] as $gid=>$num){
+                    $BusinessToGoods = BusinessToGoods::get($gid);
+                    if($BusinessToGoods){
+                        $BusinessToOrdersGoods = new BusinessToOrdersGoods();
+                        $BusinessToOrdersGoods->good_name = $BusinessToGoods->name;
+                        $BusinessToOrdersGoods->num = $num;
+                        $BusinessToOrdersGoods->price = $BusinessToGoods->price;
+                        $BusinessToOrdersGoods->total_price = bcmul($BusinessToGoods->price,$BusinessToOrdersGoods->num);
+                        $BusinessToOrdersGoods->order_number = $orderNumber;
+                        $BusinessToOrdersGoods->create_time = date('Y-m-d H:i:s');
+                        if(!$BusinessToOrdersGoods->save()){
+                            throw new \Exception("Goods Name：{$BusinessToGoods->name}，save order_goods fail");
+                        }
+                    }
+                }
+                //订单表创建数据
+                $User = $this->_user->getInfoByOpenid(Session::get('wechat_user.id'));
+                $BusinessToOrder = new BusinessToOrders();
+                $BusinessToOrder->bid = $params['bid'];
+                $BusinessToOrder->order_number = $orderNumber;
+                $BusinessToOrder->uid = $User->uid;
+                $BusinessToOrder->total_price = $this->caculateTotalPrice($params['goods']);
+                $BusinessToOrder->total_price_chy = bcmul($BusinessToOrder->total_price,$currency->result);
+                $BusinessToOrder->exchange_rate = $currency->result;
+                $BusinessToOrder->user_name = $params['name'];
+                $BusinessToOrder->user_telephone = $params['telephone'];
+                $BusinessToOrder->user_address = $params['address'];
+                $BusinessToOrder->user_post_code = $params['post_code'];
+                $BusinessToOrder->create_time = date('Y-m-d H:i:s');
+                if(!$BusinessToOrder->save()){
+                    throw new \Exception("Save order fail");
+                }
+                Db::commit();
+                return json(['errcode' => 0,'errmsg' => 'ok','orderId' => $orderNumber]);
+            }catch (\Exception $e){
+                Db::rollback();
+                return json(['errcode' => -1,'errmsg' => $e->getMessage()]);
+            }
+        }
+
     }
 
     public function getShoppingCartInfo(){
