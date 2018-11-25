@@ -51,7 +51,7 @@ class Index extends Controller
         //近期授权过，但是数据库未存有用户信息
         $this->saveData($user);
         //用户首页
-        header("Location: http://business.szfengyuecheng.com/index/index?openid={$user['id']}");
+        header("Location: http://business.szfengyuecheng.com?openid={$user['id']}");
         exit();
     }
 
@@ -70,7 +70,7 @@ class Index extends Controller
         $this->saveData($user->toArray());
 
 //        $targetUrl = empty($_SESSION['target_url']) ? '/' : $_SESSION['target_url'];
-        header("Location: http://business.szfengyuecheng.com/index/index?openid={$user->id}");
+        header("Location: http://business.szfengyuecheng.com?openid={$user->id}");
         exit();
     }
 
