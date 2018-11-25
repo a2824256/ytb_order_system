@@ -111,6 +111,15 @@ class Api extends Rest
             case 'post':
                 $json_array = json_decode(input('post.json'),true);
                 $final_json = $this->output_json_template;
+                $temp_array = [];
+//                key是商家bid
+                foreach ($json_array as $key => $value){
+//                    商品列表
+                    foreach ($json_array[$key] as $value2){
+                        $temp_array[$key] = $this->caculateTotalPrice($value2);
+                    }
+                }
+                $final_json['data'] = $temp_array;
                 return Response::create($final_json, 'json', 200,$this->header);
         }
     }
