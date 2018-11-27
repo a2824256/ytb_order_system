@@ -107,7 +107,7 @@ class Index extends Controller
     public function business()
     {
         $bid = Session::get('bid');
-        $info = BusinessAccount::where(['bid' => $bid])->field('name,pic,phone,device_id')->find();
+        $info = BusinessAccount::where(['bid' => $bid])->field('name,pic,phone,device_id,start_hour,start_min,end_hour,end_min,cpc')->find();
         $view = new View();
         $view->info = $info;
         return $view->fetch();

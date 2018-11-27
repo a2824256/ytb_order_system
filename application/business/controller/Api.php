@@ -113,12 +113,22 @@ class Api extends Rest
                         'name' => input('post.name'),
                         'phone' => input('post.phone'),
                         'device_id' => input('post.device_id'),
+                        'start_hour' => input('post.start_hour'),
+                        'start_min' => input('post.start_min'),
+                        'end_hour' => input('post.end_hour'),
+                        'end_min' => input('post.end_min'),
+                        'cpc' => input('post.cpc'),
                     ];
                 } else {
                     $content = [
                         'name' => input('post.name'),
                         'phone' => input('post.phone'),
                         'device_id' => input('post.device_id'),
+                        'start_hour' => input('post.start_hour'),
+                        'start_min' => input('post.start_min'),
+                        'end_hour' => input('post.end_hour'),
+                        'end_min' => input('post.end_min'),
+                        'cpc' => input('post.cpc'),
                     ];
                 }
                 $business = new BusinessAccount();

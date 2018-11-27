@@ -44,6 +44,26 @@
                         <label style="width: 100px;">Device ID:</label>
                         <input id="device_id" type="text" value="{$info->device_id}" class="form-control" style="width: 300px"/>
                     </div>
+                    <div class="form-inline form-group">
+                        <label style="width: 100px;">start hour:</label>
+                        <input id="start_hour" type="text" value="{$info->start_hour}" class="form-control" style="width: 300px"/>
+                    </div>
+                    <div class="form-inline form-group">
+                        <label style="width: 100px;">start min:</label>
+                        <input id="start_min" type="text" value="{$info->start_min}" class="form-control" style="width: 300px"/>
+                    </div>
+                    <div class="form-inline form-group">
+                        <label style="width: 100px;">end hour:</label>
+                        <input id="end_hour" type="text" value="{$info->end_hour}" class="form-control" style="width: 300px"/>
+                    </div>
+                    <div class="form-inline form-group">
+                        <label style="width: 100px;">end min:</label>
+                        <input id="end_min" type="text" value="{$info->end_min}" class="form-control" style="width: 300px"/>
+                    </div>
+                    <div class="form-inline form-group">
+                        <label style="width: 100px;">consumption per person:</label>
+                        <input id="cpc" type="text" value="{$info->cpc}" class="form-control" style="width: 300px"/>
+                    </div>
                     <input id="bid" type="hidden" value="{$Think.session.bid}" />
                     <input type="button" onclick="updateInfo()" class="btn btn-success" value="Submit" style="margin-left: 100px;"/>
                 </form>
@@ -77,6 +97,10 @@
         params['name'] = document.getElementById("name").value;
         params['phone'] = document.getElementById("phone").value;
         params['device_id'] = document.getElementById("device_id").value;
+        params['bid'] = document.getElementById("bid").value;
+        params['bid'] = document.getElementById("bid").value;
+        params['bid'] = document.getElementById("bid").value;
+        params['bid'] = document.getElementById("bid").value;
         params['bid'] = document.getElementById("bid").value;
         let res_arr = request('{:url("business/Api/updateInfo")}', params, 'post');
         res_arr.then((res)=>{
