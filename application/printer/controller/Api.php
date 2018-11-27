@@ -31,7 +31,7 @@ class Api extends Rest
                     $string .= "<0D0A>".$value['good_name']."  x".$value['num']."  ￡".$value['total_price'];
                 }
                 $string .= "<0D0A>总计： ￡".$order['total_price']."<0D0A>备注: ".$order['comment']."<0D0A>订单号: ytb".$order['order_number']."<0D0A>下单时间: ".$order['create_time']."<0D0A><0D0A><0D0A><0D0A><0D0A><0D0A><0D0A><0D0A>";
-                $param = "dingdanID="."000099996123".$order['order_number']."&dayinjisn=".$business['device_id']."&pages=1&dingdan=";
+                $param = "dingdanID=".$order['order_number']."&dayinjisn=".$business['device_id']."&pages=1&dingdan=";
                 $ch = curl_init();
                 $url = $this->url.$param.rawurlencode($string);
                 curl_setopt($ch, CURLOPT_URL,$url);

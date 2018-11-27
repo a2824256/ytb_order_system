@@ -10,6 +10,7 @@ namespace app\wechat\controller;
 use app\wechat\model\BusinessCurrency;
 use app\wechat\model\BusinessToOrders;
 use app\wechat\model\BusinessToOrdersGoods;
+use app\wechat\model\OrderNumber;
 use \think\controller\Rest;
 use think\Db;
 use \think\Response;
@@ -37,10 +38,16 @@ class Api extends Rest
     private $_user;
 
     /**
+     * 订单号
+     */
+    private $_orderNumberModel;
+
+    /**
      * 初始化
      */
-    public function __construct(BusinessCurrency $businessCurrency,User $user)
+    public function __construct(BusinessCurrency $businessCurrency,User $user,OrderNumber $orderNumberModel)
     {
+        $this->_orderNumberModel = $orderNumberModel;
         $this->_user = $user;
         $this->_businessCurrency = $businessCurrency;
     }
@@ -131,6 +138,22 @@ class Api extends Rest
     }
 
     /**
+     * 订单编号
+     */
+    private function getOrderNumber(){
+        $rule = '16820181125666';
+        $orderNumber = $this->_orderNumberModel->getOrderNumber(1);
+        if(strlen($orderNumber->number) < 8){
+            $number = $rule . str_pad((string)$orderNumber->number,8,'0',STR_PAD_LEFT);
+        }else{
+            $number = $rule . $orderNumber->number;
+        }
+        $orderNumber->number += 1;
+        $orderNumber->save();
+        return $number;
+    }
+
+    /**
      * 结算接口
      */
     public function settlement(){
@@ -157,7 +180,7 @@ class Api extends Rest
                 //英镑汇率
                 $Currency = $this->_businessCurrency->getDetailByFromAndTo('GBP','CNY');
                 //订单编号
-                $orderNumber = '201801010101';
+                $orderNumber = $this->getOrderNumber();
                 //订单记录表
                 foreach($params['goods'] as $gid=>$num){
                     $BusinessToGoods = BusinessToGoods::get($gid);

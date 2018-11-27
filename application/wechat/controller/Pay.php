@@ -94,11 +94,15 @@ class Pay extends Controller
         //获得英镑汇率
         $Currency = $this->_businessCurrency->getDetailByFromAndTo('GBP','CNY');
         //最终汇率
-        $rate = bcadd($Currency->result,0.15);
+        $rate = bcadd($Currency->result,0.15,4);
         //金额向上取整单位（元）
-        $total_price = ceil(bcmul($this->order->total_price,$rate));
+        $total_price = ceil(bcmul($this->order->total_price,$rate,2));
         //化为分
         $total_price = $total_price * 100;
+        //五分钟支付限制
+        if(time() - strtotime($this->order->create_time) > 300){
+            exit('Your order has not been paid for more than 5 minutes, please re-order');
+        }
         //使用jsapi接口
         try{
             $jsApi = new \JsApi_pub();
@@ -139,13 +143,11 @@ class Pay extends Controller
             //$unifiedOrder->setParameter("sub_mch_id","XXXX");//子商户号
             //$unifiedOrder->setParameter("device_info","XXXX");//设备号
             //$unifiedOrder->setParameter("attach","XXXX");//附加数据
-            //五分钟支付限制
-            $unifiedOrder->setParameter("time_start",date("YmdHis",strtotime($this->order->create_time)));//交易起始时间
-            $unifiedOrder->setParameter("time_expire",date('YmdHis',strtotime($this->order->create_time) + 60 * 5));//交易结束时间
+//            $unifiedOrder->setParameter("time_start",date("YmdHis",strtotime($this->order->create_time)));//交易起始时间
+//            $unifiedOrder->setParameter("time_expire",date('YmdHis',strtotime($this->order->create_time) + 60 * 5));//交易结束时间
             //$unifiedOrder->setParameter("goods_tag","XXXX");//商品标记
             //$unifiedOrder->setParameter("openid","XXXX");//用户标识
             //$unifiedOrder->setParameter("product_id","XXXX");//商品ID
-
             $prepay_id = $unifiedOrder->getPrepayId();
             //=========步骤3：使用jsapi调起支付============
             $jsApi->setPrepayId($prepay_id);
@@ -212,6 +214,12 @@ class Pay extends Controller
                         //此处应该更新一下订单状态，商户自行增删操作
                         self::logResult("【支付成功】:".$xml);
                         Db::commit();
+                        //打印订单
+                        $printer = new \app\printer\controller\Api();
+                        $printerResult = $printer->printOrder();
+                        if($printerResult != 'OK'){
+                            self::logResult("【打印信息报错】:".$this->order->openid);
+                        }
                     }catch(\Exception $e){
                         Db::rollback();
                         self::logResult("【异常报错信息】:".$e->getMessage());
