@@ -32,16 +32,12 @@ class Index extends Controller
 
     public function main()
     {
-        $account = Session::get('business');
-        $business = BusinessAccount::get(['account' => $account]);
-        if (!empty($business)) {
-            $business_info = $business->visible(['account', 'name', 'pic'])->toArray();
-            $view = new View();
-            $view->business_info = $business_info;
-            return $view->fetch();
-        } else {
-            exit($account);
-        }
+        $orders = BusinessToOrders::where(['create_time'=>date("Y-m-d H:i:s")."%"])->count();
+        $rec = BusinessToOrders::where(['create_time'=>date("Y-m-d H:i:s")."%",'status'=>1])->sum('total_price');
+        $view = new View();
+        $view->orders = $orders;
+        $view->rec = $rec;
+        return $view->fetch();
     }
 
     public function goods()
