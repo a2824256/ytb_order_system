@@ -98,10 +98,11 @@
         params['phone'] = document.getElementById("phone").value;
         params['device_id'] = document.getElementById("device_id").value;
         params['bid'] = document.getElementById("bid").value;
-        params['bid'] = document.getElementById("bid").value;
-        params['bid'] = document.getElementById("bid").value;
-        params['bid'] = document.getElementById("bid").value;
-        params['bid'] = document.getElementById("bid").value;
+        params['start_hour'] = document.getElementById("start_hour").value;
+        params['start_min'] = document.getElementById("start_min").value;
+        params['end_hour'] = document.getElementById("end_hour").value;
+        params['end_min'] = document.getElementById("end_min").value;
+        params['cpc'] = document.getElementById("cpc").value;
         let res_arr = request('{:url("business/Api/updateInfo")}', params, 'post');
         res_arr.then((res)=>{
             if (res.code == 1) {
