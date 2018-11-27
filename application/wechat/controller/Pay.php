@@ -68,7 +68,7 @@ class Pay extends Controller
         $this->checkParams($orderId);
         $this->getParams();
         $view = new View();
-        $data = ['jsApiParameters'=>$this->jsApiParameters,'successPayUrl' => 'www1','cancelUrl'=>'www2'];
+        $data = ['jsApiParameters'=>$this->jsApiParameters,'successPayUrl' => 'http://business.szfengyuecheng.com/paySuccess','cancelUrl'=>'http://business.szfengyuecheng.com/payFail'];
         $view->assign('data',$data);
         return $view->fetch('pay');
     }
@@ -99,7 +99,6 @@ class Pay extends Controller
         $total_price = ceil(bcmul($this->order->total_price,$rate));
         //化为分
         $total_price = $total_price * 100;
-
         //使用jsapi接口
         try{
             $jsApi = new \JsApi_pub();
@@ -140,8 +139,9 @@ class Pay extends Controller
             //$unifiedOrder->setParameter("sub_mch_id","XXXX");//子商户号
             //$unifiedOrder->setParameter("device_info","XXXX");//设备号
             //$unifiedOrder->setParameter("attach","XXXX");//附加数据
-            //$unifiedOrder->setParameter("time_start","XXXX");//交易起始时间
-            //$unifiedOrder->setParameter("time_expire","XXXX");//交易结束时间
+            //五分钟支付限制
+            $unifiedOrder->setParameter("time_start",date("YmdHis",strtotime($this->order->create_time)));//交易起始时间
+            $unifiedOrder->setParameter("time_expire",date('YmdHis',strtotime($this->order->create_time) + 60 * 5));//交易结束时间
             //$unifiedOrder->setParameter("goods_tag","XXXX");//商品标记
             //$unifiedOrder->setParameter("openid","XXXX");//用户标识
             //$unifiedOrder->setParameter("product_id","XXXX");//商品ID
