@@ -89,8 +89,12 @@ class Pay extends Controller
     /**
      * 获取支付参数
      */
-     private function getParams()
+    private function getParams()
     {
+        //五分钟支付限制
+        if(time() - strtotime($this->order->create_time) > 300){
+            exit('Your order has not been paid for more than 5 minutes, please re-order');
+        }
         //获得英镑汇率
         $Currency = $this->_businessCurrency->getDetailByFromAndTo('GBP','CNY');
         //最终汇率
@@ -99,10 +103,8 @@ class Pay extends Controller
         $total_price = ceil(bcmul($this->order->total_price,$rate,2));
         //化为分
         $total_price = $total_price * 100;
-        //五分钟支付限制
-        if(time() - strtotime($this->order->create_time) > 300){
-            exit('Your order has not been paid for more than 5 minutes, please re-order');
-        }
+        //测试专用
+        $total_price = 1;
         //使用jsapi接口
         try{
             $jsApi = new \JsApi_pub();
@@ -134,7 +136,6 @@ class Pay extends Controller
             $unifiedOrder->setParameter("openid",$this->order->openid);//商品描述
             $unifiedOrder->setParameter("body","外卖订餐");//商品描述
             //自定义订单号，此处仅作举例
-
             $unifiedOrder->setParameter("out_trade_no",$this->order->order_number);//商户订单号
             $unifiedOrder->setParameter("total_fee", $total_price);//总金额
             $unifiedOrder->setParameter("notify_url",$this->notifyUrl);//通知地址
@@ -164,9 +165,9 @@ class Pay extends Controller
     {
         //使用通用通知接口
         $notify = new \Notify_pub();
-
         //存储微信的回调
-        $xml = $GLOBALS['HTTP_RAW_POST_DATA'];
+            $xml = file_get_contents('php://input');
+//        $xml = "<xml><appid><![CDATA[wx007296fc9a7d315f]]></appid><bank_type><![CDATA[CFT]]></bank_type><cash_fee><![CDATA[1]]></cash_fee><fee_type><![CDATA[CNY]]></fee_type><is_subscribe><![CDATA[Y]]></is_subscribe><mch_id><![CDATA[1517605751]]></mch_id><nonce_str><![CDATA[n2zwk5unl1365d3axvg018via68biibc]]></nonce_str><openid><![CDATA[ohR9-5uW69zvsQPzBGpD47rWct9g]]></openid><out_trade_no><![CDATA[2019028]]></out_trade_no><result_code><![CDATA[SUCCESS]]></result_code><return_code><![CDATA[SUCCESS]]></return_code><sign><![CDATA[21400EA1AA389F07BF78E09A6C6343BE]]></sign><time_end><![CDATA[20181128200152]]></time_end><total_fee>1</total_fee><trade_type><![CDATA[JSAPI]]></trade_type><transaction_id><![CDATA[4200000198201811283819414168]]></transaction_id></xml>";
         $notify->saveData($xml);
 
         //验证签名，并回应微信。
@@ -205,14 +206,12 @@ class Pay extends Controller
                 $this->checkParams($orderNo);
                 if($this->order->status == 0){
                     //如果订单未支付则进入此逻辑
-                    Db::transaction();
+                    Db::startTrans();
                     try{
-                        $this->order->status = 1;
-                        if(!$this->order->save()){
+                        $result = DB::table('business_to_orders')->where('order_number',$this->order->order_number)->update(['status' => 1]);
+                        if(!$result){
                             throw new \Exception("openid:{$this->order->openid},error:{$this->order->getError()}");
                         }
-                        //此处应该更新一下订单状态，商户自行增删操作
-                        self::logResult("【支付成功】:".$xml);
                         Db::commit();
                         //打印订单
                         $printer = new \app\printer\controller\Api();
@@ -220,6 +219,8 @@ class Pay extends Controller
                         if($printerResult != 'OK'){
                             self::logResult("【打印信息报错】:".$this->order->openid);
                         }
+                        //此处应该更新一下订单状态，商户自行增删操作
+                        self::logResult("【支付成功】:".$xml);
                     }catch(\Exception $e){
                         Db::rollback();
                         self::logResult("【异常报错信息】:".$e->getMessage());

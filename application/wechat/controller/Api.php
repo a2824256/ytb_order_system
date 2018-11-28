@@ -158,69 +158,68 @@ class Api extends Rest
      * 结算接口
      */
     public function settlement(){
-        if(!Session::has('wechat_user')){
-            return json(['errcode' => -1,'errmsg' => 'Loss of authorization information']);
-        }
+        switch ($this->method){
+            case 'post':
+                if(!Session::has('wechat_user')){
+                    return json(['errcode' => -1,'errmsg' => 'Loss of authorization information']);
+                }
 
-        if($this->method != 'post'){
-            return json(['errcode' => -2,'errmsg' => 'Incorrect request method']);
-        }
+                $params = [
+                    'bid' => trim(input('post.bid')),
+                    'goods' => json_decode(input('post.goods'),true),
+                    'name' => trim(input('post.name')),
+                    'telephone' => trim(input('post.telephone')),
+                    'address' => trim(input('post.address')),
+                    'post_code' => trim(input('post.post_code')),
+                ];
 
-        $params = [
-            'bid' => trim(input('post.bid')),
-            'goods' => json_decode(input('post.goods'),true),
-            'name' => trim(input('post.name')),
-            'telephone' => trim(input('post.telephone')),
-            'address' => trim(input('post.address')),
-            'post_code' => trim(input('post.post_code')),
-        ];
-
-        if(!empty($params['goods']) && is_array($params['goods'])){
-            try{
-                Db::transaction();
-                //英镑汇率
-                $Currency = $this->_businessCurrency->getDetailByFromAndTo('GBP','CNY');
-                //订单编号
-                $orderNumber = $this->getOrderNumber();
-                //订单记录表
-                foreach($params['goods'] as $gid=>$num){
-                    $BusinessToGoods = BusinessToGoods::get($gid);
-                    if($BusinessToGoods){
-                        $BusinessToOrdersGoods = new BusinessToOrdersGoods();
-                        $BusinessToOrdersGoods->good_name = $BusinessToGoods->name;
-                        $BusinessToOrdersGoods->num = $num;
-                        $BusinessToOrdersGoods->price = $BusinessToGoods->price;
-                        $BusinessToOrdersGoods->total_price = bcmul($BusinessToGoods->price,$BusinessToOrdersGoods->num);
-                        $BusinessToOrdersGoods->order_number = $orderNumber;
-                        $BusinessToOrdersGoods->create_time = date('Y-m-d H:i:s');
-                        if(!$BusinessToOrdersGoods->save()){
-                            throw new \Exception("Goods Name：{$BusinessToGoods->name}，save order_goods fail");
+                if(!empty($params['goods']) && is_array($params['goods'])){
+                    try{
+                        Db::transaction();
+                        //英镑汇率
+                        $Currency = $this->_businessCurrency->getDetailByFromAndTo('GBP','CNY');
+                        //订单编号
+                        $orderNumber = $this->getOrderNumber();
+                        //订单记录表
+                        foreach($params['goods'] as $gid=>$num){
+                            $BusinessToGoods = BusinessToGoods::get($gid);
+                            if($BusinessToGoods){
+                                $BusinessToOrdersGoods = new BusinessToOrdersGoods();
+                                $BusinessToOrdersGoods->good_name = $BusinessToGoods->name;
+                                $BusinessToOrdersGoods->num = $num;
+                                $BusinessToOrdersGoods->price = $BusinessToGoods->price;
+                                $BusinessToOrdersGoods->total_price = bcmul($BusinessToGoods->price,$BusinessToOrdersGoods->num);
+                                $BusinessToOrdersGoods->order_number = $orderNumber;
+                                $BusinessToOrdersGoods->create_time = date('Y-m-d H:i:s');
+                                if(!$BusinessToOrdersGoods->save()){
+                                    throw new \Exception("Goods Name：{$BusinessToGoods->name}，save order_goods fail");
+                                }
+                            }
                         }
+                        //订单表创建数据
+                        $User = $this->_user->getInfoByOpenid(Session::get('wechat_user.id'));
+                        $BusinessToOrder = new BusinessToOrders();
+                        $BusinessToOrder->bid = $params['bid'];
+                        $BusinessToOrder->order_number = $orderNumber;
+                        $BusinessToOrder->uid = $User->uid;
+                        $BusinessToOrder->total_price = $this->caculateTotalPrice($params['goods']);
+                        $BusinessToOrder->total_price_chy = bcmul($BusinessToOrder->total_price,$Currency->result);
+                        $BusinessToOrder->exchange_rate = $Currency->result;
+                        $BusinessToOrder->user_name = $params['name'];
+                        $BusinessToOrder->user_telephone = $params['telephone'];
+                        $BusinessToOrder->user_address = $params['address'];
+                        $BusinessToOrder->user_post_code = $params['post_code'];
+                        $BusinessToOrder->create_time = date('Y-m-d H:i:s');
+                        if(!$BusinessToOrder->save()){
+                            throw new \Exception("Save order fail");
+                        }
+                        Db::commit();
+                        return json(['errcode' => 0,'errmsg' => 'ok','orderId' => $orderNumber]);
+                    }catch (\Exception $e){
+                        Db::rollback();
+                        return json(['errcode' => -2,'errmsg' => $e->getMessage()]);
                     }
                 }
-                //订单表创建数据
-                $User = $this->_user->getInfoByOpenid(Session::get('wechat_user.id'));
-                $BusinessToOrder = new BusinessToOrders();
-                $BusinessToOrder->bid = $params['bid'];
-                $BusinessToOrder->order_number = $orderNumber;
-                $BusinessToOrder->uid = $User->uid;
-                $BusinessToOrder->total_price = $this->caculateTotalPrice($params['goods']);
-                $BusinessToOrder->total_price_chy = bcmul($BusinessToOrder->total_price,$Currency->result);
-                $BusinessToOrder->exchange_rate = $Currency->result;
-                $BusinessToOrder->user_name = $params['name'];
-                $BusinessToOrder->user_telephone = $params['telephone'];
-                $BusinessToOrder->user_address = $params['address'];
-                $BusinessToOrder->user_post_code = $params['post_code'];
-                $BusinessToOrder->create_time = date('Y-m-d H:i:s');
-                if(!$BusinessToOrder->save()){
-                    throw new \Exception("Save order fail");
-                }
-                Db::commit();
-                return json(['errcode' => 0,'errmsg' => 'ok','orderId' => $orderNumber]);
-            }catch (\Exception $e){
-                Db::rollback();
-                return json(['errcode' => -3,'errmsg' => $e->getMessage()]);
-            }
         }
 
     }
