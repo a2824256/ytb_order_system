@@ -227,21 +227,20 @@ class Api extends Rest
 
     public function getShoppingCartInfo(){
         switch ($this->method) {
-            case 'GET':
-//                $json_array = json_decode(input('get.json'),true);
+            case 'get':
+                $json_array = json_decode(input('get.json'),true);
                 $final_json = $this->output_json_template;
-                return Response::create($final_json, 'json', 200,$this->header);
                 $temp_array = [];
 //                key是商家bid
                 foreach ($json_array as $key => $value){
 //                    商品列表
-                    foreach ($json_array[$key] as $value2){
-                        $temp_array[$key] = $this->caculateTotalPrice($value2);
-                    }
+                    $temp_array[$key] = $this->caculateTotalPrice($value,true);
                 }
                 $final_json['data'] = $temp_array;
+                $final_json['status'] = 1;
                 return json($final_json, 200,$this->header);
         }
+        echo $this->method;
     }
 //  type表示是否要返回除总价之外的其他信息,返回数据类型array
     private function caculateTotalPrice($json_array,$type = false){
