@@ -249,7 +249,6 @@ class Pay extends Controller
         $json = json_encode($text,JSON_UNESCAPED_UNICODE)."\n";
         fwrite($fp, $json);
         fclose($fp);
-        exit;
     }
 
 
