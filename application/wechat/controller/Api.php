@@ -50,6 +50,7 @@ class Api extends Rest
         $this->_orderNumberModel = $orderNumberModel;
         $this->_user = $user;
         $this->_businessCurrency = $businessCurrency;
+        parent::__construct();
     }
 
     public function businessList()
@@ -226,9 +227,10 @@ class Api extends Rest
 
     public function getShoppingCartInfo(){
         switch ($this->method) {
-            case 'post':
-                $json_array = json_decode(input('post.json'),true);
+            case 'GET':
+//                $json_array = json_decode(input('get.json'),true);
                 $final_json = $this->output_json_template;
+                return Response::create($final_json, 'json', 200,$this->header);
                 $temp_array = [];
 //                key是商家bid
                 foreach ($json_array as $key => $value){
@@ -238,7 +240,7 @@ class Api extends Rest
                     }
                 }
                 $final_json['data'] = $temp_array;
-                return Response::create($final_json, 'json', 200,$this->header);
+                return json($final_json, 200,$this->header);
         }
     }
 //  type表示是否要返回除总价之外的其他信息,返回数据类型array
