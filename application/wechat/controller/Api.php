@@ -14,6 +14,7 @@ use app\wechat\model\BusinessToOrdersGoods;
 use app\wechat\model\OrderNumber;
 use \think\controller\Rest;
 use think\Db;
+use think\Exception;
 use \think\Response;
 use \app\common\model\BusinessAccount;
 use \app\wechat\model\User;
@@ -23,7 +24,8 @@ use think\Session;
 
 class Api extends Rest
 {
-    private $header = ["Access-Control-Allow-Method" => "*", "Access-Control-Allow-Origin" => "http://127.0.0.1:8000", "Access-Control-Allow-Credentials" => true, "Access-Control-Allow-Headers" => "Origin, X-Requested-With, Content-Type, Accept"];
+    private $header = ["Access-Control-Allow-Method" => "*", "Access-Control-Allow-Origin" => "http://business.szfengyuecheng.com", "Access-Control-Allow-Credentials" => true, "Access-Control-Allow-Headers" => "Origin, X-Requested-With, Content-Type, Accept"];
+//    private $header = ["Access-Control-Allow-Method" => "*", "Access-Control-Allow-Origin" => "http://127.0.0.1:8000", "Access-Control-Allow-Credentials" => true, "Access-Control-Allow-Headers" => "Origin, X-Requested-With, Content-Type, Accept"];
     private $output_json_template = [
         'status' => 0
     ];
@@ -162,12 +164,12 @@ class Api extends Rest
      */
     public function settlement()
     {
-        if (!Session::has('wechat_user')) {
-            return json(['errcode' => -1, 'errmsg' => 'Loss of authorization information']);
-        }
+//        if (!Session::has('wechat_user')) {
+//            return json(['errcode' => -1, 'errmsg' => 'Loss of authorization information'],200,$this->header);
+//        }
 
         if ($this->method != 'post') {
-            return json(['errcode' => -2, 'errmsg' => 'Incorrect request method']);
+            return json(['errcode' => -2, 'errmsg' => 'Incorrect request method'],200,$this->header);
         }
 
         $params = [
@@ -220,13 +222,68 @@ class Api extends Rest
                     throw new \Exception("Save order fail");
                 }
                 Db::commit();
-                return json(['errcode' => 0, 'errmsg' => 'ok', 'orderId' => $orderNumber]);
+                return Response::create(['errcode' => 0, 'errmsg' => 'ok', 'orderId' => $orderNumber], 'json', 200, $this->header);
             } catch (\Exception $e) {
                 Db::rollback();
-                return json(['errcode' => -3, 'errmsg' => $e->getMessage()]);
+                return Response::create(['errcode' => -3, 'errmsg' => $e->getMessage()], 'json', 200, $this->header);
             }
         }
 
+    }
+
+    public function getUserInfo(){
+        switch ($this->method) {
+            case 'get':
+                $uid = input('get.uid');
+                $userInfo = User::where(['uid'=>$uid])->find();
+                $final_json = $this->header;
+                $final_json['info'] = $userInfo;
+                return Response::create($final_json, 'json', 200, $this->header);
+        }
+    }
+
+    public function getOrders()
+    {
+        switch ($this->method) {
+            case 'get':
+                $uid = input('get.uid');
+                $final_json['status'] = 1;
+                $final_json['orders'] = BusinessToOrders::where(['uid'=>$uid,'status'=>1])->field('order_number,total_price,create_time')->limit(20)->select();
+                foreach ($final_json['orders'] as $key =>$value){
+                    $goods = BusinessToOrdersGoods::where(['order_number'=>$value['order_number']])->field('good_name,num,price,total_price')->select();
+                    $final_json['orders'][$key]['goods'] = $goods;
+                }
+                return Response::create($final_json, 'json', 200, $this->header);
+        }
+    }
+
+    public function updateUserInfo(){
+        switch ($this->method) {
+            case 'post':
+                try{
+                    $json_arr = json_decode(input('post.json'), true);
+                    if(empty($json_arr)){
+                        $final_json['status'] = 0;
+                        return Response::create($final_json, 'json', 200, $this->header);
+                    }
+                    $res = User::where('uid',$json_arr['uid'])
+                        ->update([
+                            'name'=>$json_arr['name'],
+                            'telephone'=>$json_arr['telephone'],
+                            'address' => $json_arr['address'],
+                            'post_code' => $json_arr['post_code']
+                        ]);
+                    $final_json['status'] = 1;
+                    return Response::create($final_json, 'json', 200, $this->header);
+
+                }catch (\think\Exception $e){
+                    $final_json['status'] = 0;
+                    $final_json['error_mes'] = $e->getMessage();
+                    $final_json['json'] = input('post.json');
+                    return Response::create($final_json, 'json', 200, $this->header);
+                }
+
+        }
     }
 
     public function getShoppingCartInfo()
@@ -235,12 +292,17 @@ class Api extends Rest
             case 'get':
             case 'post':
                 $json_array = [];
+                $final_json = $this->output_json_template;
                 if ($this->method == 'get') {
                     $json_array = json_decode(input('get.json'), true);
+                    $final_json['reason'] = "xxx1";
+                    $final_json['json'] = input('get.json');
                 } else {
                     $json_array = json_decode(input('post.json'), true);
+                    $final_json['reason'] = "xxx2";
+                    $final_json['json'] = $_POST;
                 }
-                $final_json = $this->output_json_template;
+
                 if (empty($json_array)) {
                     return json($final_json, 200, $this->header);
                 }
@@ -274,7 +336,7 @@ class Api extends Rest
             if (isset($json_array[$value['gid']])) {
                 $total_price += $value['price'] * $json_array[$value['gid']];
                 if ($type) {
-                    $goods_list[$value['gid']] = ['name' => $value['name'], 'num' => $json_array[$value['gid']]];
+                    $goods_list[$value['gid']] = new \ArrayObject(['value'=>$value['gid'],'label' => $value['name'], 'num' => $json_array[$value['gid']], 'price'=>$value['price']]);
                 }
             }
         }

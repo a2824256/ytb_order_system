@@ -18,5 +18,4 @@ class BusinessToOrders extends Model
     public function getModelByOrderId($orderId){
         return BusinessToOrders::join('user','user.uid = business_to_orders.uid')->where(['order_number' => $orderId])->field('user.openid,business_to_orders.*')->find();
     }
-
 }
