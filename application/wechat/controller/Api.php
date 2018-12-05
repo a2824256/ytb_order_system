@@ -248,11 +248,41 @@ class Api extends Rest
             case 'get':
                 $uid = input('get.uid');
                 $final_json['status'] = 1;
-                $final_json['orders'] = BusinessToOrders::where(['uid'=>$uid,'status'=>1])->field('order_number,total_price,create_time')->limit(20)->select();
-                foreach ($final_json['orders'] as $key =>$value){
-                    $goods = BusinessToOrdersGoods::where(['order_number'=>$value['order_number']])->field('good_name,num,price,total_price')->select();
-                    $final_json['orders'][$key]['goods'] = $goods;
+                $order_goods = [];
+                $orders = BusinessToOrders::where(['uid'=>$uid,'status'=>1])
+                    ->join('business_to_orders_goods','business_to_orders_goods.order_number = business_to_orders.order_number')
+                    ->field('business_to_orders.order_number,business_to_orders.total_price as order_total_price,business_to_orders.create_time,business_to_orders_goods.good_name,business_to_orders_goods.num,business_to_orders_goods.price,business_to_orders_goods.total_price as good_total_price')
+                    ->select()
+                    ->toArray();
+                foreach($orders as $key =>$value){
+                    if(array_key_exists($value['order_number'],$order_goods)){
+                        //存在多条账单时处理逻辑
+                        $data = [
+                            'good_name' => $value['good_name'],
+                            'num' => $value['num'],
+                            'price' => $value['price'],
+                            'good_total_price' => $value['good_total_price'],
+                        ];
+                        $order_goods[$value['order_number']]['goods'][] = $data;
+                    }else{
+                        //添加第一条订单数据
+                        $data = [
+                            'order_number' => $value['order_number'],
+                            'order_total_price' => $value['order_total_price'],
+                            'create_time' => $value['create_time'],
+                            'goods' => [
+                                [
+                                    'good_name' => $value['good_name'],
+                                    'num' => $value['num'],
+                                    'price' => $value['price'],
+                                    'good_total_price' => $value['good_total_price'],
+                                ]
+                            ]
+                        ];
+                        $order_goods[$value['order_number']] = $data;
+                    }
                 }
+                $final_json['orders'] = array_values($order_goods);
                 return Response::create($final_json, 'json', 200, $this->header);
         }
     }
