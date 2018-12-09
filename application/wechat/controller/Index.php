@@ -111,4 +111,8 @@ class Index extends Controller
         return $uid;
     }
 
+
+    public function delivery(){
+
+    }
 }
