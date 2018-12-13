@@ -25,7 +25,7 @@ use think\Session;
 class Api extends Rest
 {
     private $header = ["Access-Control-Allow-Method" => "*", "Access-Control-Allow-Origin" => "http://business.szfengyuecheng.com", "Access-Control-Allow-Credentials" => true, "Access-Control-Allow-Headers" => "Origin, X-Requested-With, Content-Type, Accept"];
-//    private $header = ["Access-Control-Allow-Method" => "*", "Access-Control-Allow-Origin" => "http://127.0.0.1:8000", "Access-Control-Allow-Credentials" => true, "Access-Control-Allow-Headers" => "Origin, X-Requested-With, Content-Type, Accept"];
+//‘    private $header = ["Access-Control-Allow-Method" => "*", "Access-Control-Allow-Origin" => "http://127.0.0.1:8000", "Access-Control-Allow-Credentials" => true, "Access-Control-Allow-Headers" => "Origin, X-Requested-With, Content-Type, Accept"];
     private $output_json_template = [
         'status' => 0
     ];
@@ -147,15 +147,14 @@ class Api extends Rest
      */
     private function getOrderNumber()
     {
-        $rule = '16820181125666';
+        $rule = '2018';
         $orderNumber = $this->_orderNumberModel->getOrderNumber(1);
-        if (strlen($orderNumber->number) < 8) {
-            $number = $rule . str_pad((string)$orderNumber->number, 8, '0', STR_PAD_LEFT);
+        if (strlen($orderNumber->number) < 6) {
+            $number = $rule . str_pad((string)$orderNumber->number, 6, '0', STR_PAD_LEFT);
         } else {
             $number = $rule . $orderNumber->number;
         }
-        $orderNumber->number += 1;
-        $orderNumber->save();
+        OrderNumber::where(['id'=>1])->setInc("number");
         return $number;
     }
 
@@ -164,30 +163,46 @@ class Api extends Rest
      */
     public function settlement()
     {
-//        if (!Session::has('wechat_user')) {
-//            return json(['errcode' => -1, 'errmsg' => 'Loss of authorization information'],200,$this->header);
-//        }
-
         if ($this->method != 'post') {
-            return json(['errcode' => -2, 'errmsg' => 'Incorrect request method'],200,$this->header);
+            return json(['errcode' => -2, 'errmsg' => '错误请求'],200,$this->header);
         }
-
+        if(!input('?post.uid')){
+            return json(['errcode' => -2, 'errmsg' => '缺失参数'],200,$this->header);
+        }
+        $uid = trim(input('post.uid'));
         $params = [
             'bid' => trim(input('post.bid')),
-            'goods' => json_decode(input('post.goods'), true),
+            'goods' => json_decode(input('post.json'), true),
             'name' => trim(input('post.name')),
             'telephone' => trim(input('post.telephone')),
             'address' => trim(input('post.address')),
             'post_code' => trim(input('post.post_code')),
         ];
-
         if (!empty($params['goods']) && is_array($params['goods'])) {
+            Db::startTrans();
             try {
-                Db::transaction();
                 //英镑汇率
                 $Currency = $this->_businessCurrency->getDetailByFromAndTo('GBP', 'CNY');
                 //订单编号
                 $orderNumber = $this->getOrderNumber();
+                //订单表创建数据
+                $User = $this->_user->getInfoByOpenid($uid);
+                $BusinessToOrder = new BusinessToOrders();
+                $BusinessToOrder->bid = $params['bid'];
+                $BusinessToOrder->order_number = (int)$orderNumber;
+                $BusinessToOrder->uid = $User->uid;
+                $BusinessToOrder->total_price = $this->caculateTotalPrice($params['goods'])["total_price"];
+                $BusinessToOrder->total_price_chy = bcmul($Currency->result, (string)$BusinessToOrder->total_price);
+                $BusinessToOrder->exchange_rate = $Currency->result;
+                $BusinessToOrder->user_name = $params['name'];
+                $BusinessToOrder->user_telephone = $params['telephone'];
+                $BusinessToOrder->user_address = $params['address'];
+                $BusinessToOrder->user_post_code = $params['post_code'];
+                $BusinessToOrder->create_time = date('Y-m-d H:i:s');
+                if (!$BusinessToOrder->save()) {
+//                    throw new \Exception("Save order fail");
+                    return Response::create(['errcode' => -3, 'errmsg' => '订单创建失败2', 'orderId' => $orderNumber], 'json', 200, $this->header);
+                }
                 //订单记录表
                 foreach ($params['goods'] as $gid => $num) {
                     $BusinessToGoods = BusinessToGoods::get($gid);
@@ -197,36 +212,22 @@ class Api extends Rest
                         $BusinessToOrdersGoods->num = $num;
                         $BusinessToOrdersGoods->price = $BusinessToGoods->price;
                         $BusinessToOrdersGoods->total_price = bcmul($BusinessToGoods->price, $BusinessToOrdersGoods->num);
-                        $BusinessToOrdersGoods->order_number = $orderNumber;
+                        $BusinessToOrdersGoods->order_number = (int)$orderNumber;
                         $BusinessToOrdersGoods->create_time = date('Y-m-d H:i:s');
                         if (!$BusinessToOrdersGoods->save()) {
-                            throw new \Exception("Goods Name：{$BusinessToGoods->name}，save order_goods fail");
+//                            throw new \Exception("Goods Name：{$BusinessToGoods->name}，save order_goods fail");
+                            return Response::create(['errcode' => -3, 'errmsg' => '订单创建失败1', 'orderId' => $orderNumber], 'json', 200, $this->header);
                         }
                     }
-                }
-                //订单表创建数据
-                $User = $this->_user->getInfoByOpenid(Session::get('wechat_user.id'));
-                $BusinessToOrder = new BusinessToOrders();
-                $BusinessToOrder->bid = $params['bid'];
-                $BusinessToOrder->order_number = $orderNumber;
-                $BusinessToOrder->uid = $User->uid;
-                $BusinessToOrder->total_price = $this->caculateTotalPrice($params['goods']);
-                $BusinessToOrder->total_price_chy = bcmul($BusinessToOrder->total_price, $Currency->result);
-                $BusinessToOrder->exchange_rate = $Currency->result;
-                $BusinessToOrder->user_name = $params['name'];
-                $BusinessToOrder->user_telephone = $params['telephone'];
-                $BusinessToOrder->user_address = $params['address'];
-                $BusinessToOrder->user_post_code = $params['post_code'];
-                $BusinessToOrder->create_time = date('Y-m-d H:i:s');
-                if (!$BusinessToOrder->save()) {
-                    throw new \Exception("Save order fail");
                 }
                 Db::commit();
                 return Response::create(['errcode' => 0, 'errmsg' => 'ok', 'orderId' => $orderNumber], 'json', 200, $this->header);
             } catch (\Exception $e) {
                 Db::rollback();
-                return Response::create(['errcode' => -3, 'errmsg' => $e->getMessage()], 'json', 200, $this->header);
+                return Response::create(['errcode' => -3, 'errmsg' => $e->getMessage(),'line'=>$e->getLine()], 'json', 200, $this->header);
             }
+        }else{
+            return Response::create(['errcode' => -3, 'errmsg' => $params['goods']], 'json', 200, $this->header);
         }
 
     }
