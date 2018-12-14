@@ -104,7 +104,7 @@ class Pay extends Controller
         //化为分
         $total_price = $total_price * 100;
         //测试专用
-        $total_price = 1;
+//        $total_price = 1;
         //使用jsapi接口
         try{
             $jsApi = new \JsApi_pub();
