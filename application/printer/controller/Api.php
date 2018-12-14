@@ -9,20 +9,18 @@ use \app\business\model\BusinessToOrders;
 use \app\business\model\BusinessToGoodsClassifications;
 use \think\Session;
 
-class Api extends Rest
+class Api
 {
 
-    private $url = "115.28.15.113:60003/?";
-    private $rePrintUrl = "115.28.15.113:61111/?";
+//    private $url = "115.28.15.113:60003/?";
+    private $url = "115.28.15.113:61111/?";
     private $output_json_template = [
         'status' => 0
     ];
 
-    public function printOrder()
+    public function printOrder($billoid)
     {
-        switch ($this->method) {
-            case 'get':
-                $oid = input('get.oid');
+                $oid = $billoid;
                 $order = BusinessToOrders::where(['order_number' => $oid])->field('user_name,user_post_code,user_telephone,user_address,bid,comment,total_price,order_number,create_time')->find();
                 $goods = BusinessToOrdersGoods::where(['order_number' => $oid])->column('gid,good_name,num,price,total_price');
                 $business = BusinessAccount::where(['bid' => $order['bid']])->field('name,phone,device_id')->find();
@@ -41,6 +39,5 @@ class Api extends Rest
                 curl_close($ch);
                 $resj['status'] = $output;
                 return $this->response($resj, 'json', 200);
-        }
     }
 }

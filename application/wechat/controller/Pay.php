@@ -104,7 +104,7 @@ class Pay extends Controller
         //化为分
         $total_price = $total_price * 100;
         //测试专用
-//        $total_price = 1;
+        $total_price = 1;
         //使用jsapi接口
         try{
             $jsApi = new \JsApi_pub();
@@ -215,7 +215,7 @@ class Pay extends Controller
                         Db::commit();
                         //打印订单
                         $printer = new \app\printer\controller\Api();
-                        $printerResult = $printer->printOrder();
+                        $printerResult = $printer->printOrder($this->order->order_number);
                         if($printerResult != 'OK'){
                             self::logResult("【打印信息报错】:".$this->order->openid);
                         }
