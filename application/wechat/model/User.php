@@ -13,4 +13,8 @@ class User extends Model
         return User::where(['openid' => $openid])->find();
     }
 
+    public function getInfoByUid($uid){
+        return User::where(['uid' => $uid])->find();
+    }
+
 }

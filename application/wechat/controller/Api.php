@@ -164,10 +164,10 @@ class Api extends Rest
     public function settlement()
     {
         if ($this->method != 'post') {
-            return json(['errcode' => -2, 'errmsg' => '错误请求'],200,$this->header);
+            return Response::create(['errcode' => -1, 'errmsg' => '错误请求'], 'json', 200, $this->header);
         }
         if(!input('?post.uid')){
-            return json(['errcode' => -2, 'errmsg' => '缺失参数'],200,$this->header);
+            return Response::create(['errcode' => -2, 'errmsg' => '缺失参数'], 'json', 200, $this->header);
         }
         $uid = trim(input('post.uid'));
         $params = [
@@ -178,6 +178,7 @@ class Api extends Rest
             'address' => trim(input('post.address')),
             'post_code' => trim(input('post.post_code')),
         ];
+
         if (!empty($params['goods']) && is_array($params['goods'])) {
             Db::startTrans();
             try {
@@ -186,7 +187,7 @@ class Api extends Rest
                 //订单编号
                 $orderNumber = $this->getOrderNumber();
                 //订单表创建数据
-                $User = $this->_user->getInfoByOpenid($uid);
+                $User = $this->_user->getInfoByUid($uid);
                 $BusinessToOrder = new BusinessToOrders();
                 $BusinessToOrder->bid = $params['bid'];
                 $BusinessToOrder->order_number = (int)$orderNumber;
@@ -200,8 +201,7 @@ class Api extends Rest
                 $BusinessToOrder->user_post_code = $params['post_code'];
                 $BusinessToOrder->create_time = date('Y-m-d H:i:s');
                 if (!$BusinessToOrder->save()) {
-//                    throw new \Exception("Save order fail");
-                    return Response::create(['errcode' => -3, 'errmsg' => '订单创建失败2', 'orderId' => $orderNumber], 'json', 200, $this->header);
+                    throw new \Exception("订单创建失败1");
                 }
                 //订单记录表
                 foreach ($params['goods'] as $gid => $num) {
@@ -215,8 +215,7 @@ class Api extends Rest
                         $BusinessToOrdersGoods->order_number = (int)$orderNumber;
                         $BusinessToOrdersGoods->create_time = date('Y-m-d H:i:s');
                         if (!$BusinessToOrdersGoods->save()) {
-//                            throw new \Exception("Goods Name：{$BusinessToGoods->name}，save order_goods fail");
-                            return Response::create(['errcode' => -3, 'errmsg' => '订单创建失败1', 'orderId' => $orderNumber], 'json', 200, $this->header);
+                            throw new \Exception("订单创建失败2");
                         }
                     }
                 }
