@@ -9,8 +9,8 @@ class User extends Model
     protected $table = 'user';
     protected $autoWriteTimestamp = 'datetime';
 
-    public function getInfoByOpenid($uid){
-        return User::where(['uid' => $uid])->find();
+    public function getInfoByOpenid($openid){
+        return User::where(['openid' => $openid])->find();
     }
 
 }

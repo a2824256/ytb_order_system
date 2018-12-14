@@ -67,7 +67,7 @@ class Index extends Controller
         //近期授权过，但是数据库未存有用户信息
         $uid = $this->saveData($user);
         //用户首页
-        header("Location: http://business.szfengyuecheng.com?uid={$uid}&rand=".rand(000,999));
+        header("Location: http://business.szfengyuecheng.com?uid={$uid}");
         exit();
     }
 
