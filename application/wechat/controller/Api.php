@@ -9,23 +9,23 @@
 namespace app\wechat\controller;
 
 use app\wechat\model\BusinessCurrency;
+use app\wechat\model\BusinessToGoodsAttributes;
 use app\wechat\model\BusinessToOrders;
 use app\wechat\model\BusinessToOrdersGoods;
+use app\wechat\model\OrderDeliveryman;
 use app\wechat\model\OrderNumber;
 use \think\controller\Rest;
 use think\Db;
-use think\Exception;
 use \think\Response;
 use \app\common\model\BusinessAccount;
 use \app\wechat\model\User;
 use \app\business\model\BusinessToGoods;
 use \app\business\model\BusinessToGoodsClassifications;
-use think\Session;
 
 class Api extends Rest
 {
-    private $header = ["Access-Control-Allow-Method" => "*", "Access-Control-Allow-Origin" => "http://business.szfengyuecheng.com", "Access-Control-Allow-Credentials" => true, "Access-Control-Allow-Headers" => "Origin, X-Requested-With, Content-Type, Accept"];
-//‘    private $header = ["Access-Control-Allow-Method" => "*", "Access-Control-Allow-Origin" => "http://127.0.0.1:8000", "Access-Control-Allow-Credentials" => true, "Access-Control-Allow-Headers" => "Origin, X-Requested-With, Content-Type, Accept"];
+//    private $header = ["Access-Control-Allow-Method" => "*", "Access-Control-Allow-Origin" => "http://business.szfengyuecheng.com", "Access-Control-Allow-Credentials" => true, "Access-Control-Allow-Headers" => "Origin, X-Requested-With, Content-Type, Accept"];
+    private $header = ["Access-Control-Allow-Method" => "*", "Access-Control-Allow-Origin" => "http://127.0.0.1:8000", "Access-Control-Allow-Credentials" => true, "Access-Control-Allow-Headers" => "Origin, X-Requested-With, Content-Type, Accept"];
     private $output_json_template = [
         'status' => 0
     ];
@@ -61,7 +61,7 @@ class Api extends Rest
         switch ($this->method) {
             case 'get':
                 $bussinessList = new BusinessAccount();
-                $json['data'] = $bussinessList->field('name,phone,start_hour,start_min,end_hour,end_min,pic,cpc,bid')->select();
+                $json['data'] = $bussinessList->field('name,phone,start_hour,start_min,end_hour,end_min,pic,cpc,bid,dp')->where(['status' => 0])->order("weight DESC")->select();
                 foreach ($json['data'] as $key => $value) {
                     if ($json['data'][$key]['start_hour'] < 10) {
                         $json['data'][$key]['start_hour'] = "0" . $json['data'][$key]['start_hour'];
@@ -106,8 +106,9 @@ class Api extends Rest
     {
         switch ($this->method) {
             case 'get':
+                $bid = input('get.bid');
                 $bussinessList = new BusinessAccount();
-                $json['business_info'] = $bussinessList->where(['bid' => input('get.bid')])->field('name,phone,address,start_hour,start_min,end_hour,end_min,pic,cpc,bid')->find();
+                $json['business_info'] = $bussinessList->where(['bid' => input('get.bid')])->field('name,phone,address,start_hour,start_min,end_hour,end_min,pic,cpc,bid,dp,recommend')->find();
                 if ($json['business_info']['start_hour'] < 10) {
                     $json['business_info']['start_hour'] = "0" . $json['business_info']['start_hour'];
                 }
@@ -122,22 +123,39 @@ class Api extends Rest
                 }
                 $goods = new BusinessToGoods();
                 $class = new BusinessToGoodsClassifications();
-                $goods_list = $goods->where(['bid' => input('get.bid')])->field('name,price,pic,cid,gid')->select();
-                $classes = $class->where(['bid' => input('get.bid')])->field('name,cid')->select();
+                $attribute = new BusinessToGoodsAttributes();
+                $goods_list = $goods->where(['bid' => $bid])->field('name,price,pic,cid,gid,is_recommend')->select();
+                $classes = $class->where(['bid' => $bid])->field('name,cid')->order('weight desc')->select();
                 $json['goods'] = [];
                 $json['class_title'] = [];
-                foreach ($classes as $key => $value) {
-                    $json['class_title'][]['title'] = $value['name'];
-                    $json['goods'][$value['cid']] = [];
-//                    $json['classes'][$key]['goods'] = [];
-                    foreach ($goods_list as $value2) {
-                        if ($value2['cid'] == $value['cid']) {
-                            $json['goods'][$value['cid']][] = $value2;
-                        }
+                $recommend = [];
+                //热门
+                $hot = $goods->where(['bid' => $bid])->field('name,price,pic,cid,gid,is_recommend')->order('sell_quantity desc,create_time desc')->limit(5)->select();
+                //热门商品属性赋值
+                foreach($hot as &$h){
+                    $h['attribute'] = $attribute->where(['gid' => $h['gid']])->select();
+                }
+                $json['goods']['0'] = $hot;
+                foreach($classes as $k=>$value){
+                    $json['class_title'][$k]['title'] = $value['name'];
+                    $json['class_title'][$k]['id'] = $value['cid'];
+                }
+                array_unshift($json['class_title'],['title' => '热门商品','id' => 0]);
+                foreach ($goods_list as $key => $value2) {
+                    $value2['attribute'] = $attribute->where(['gid' => $value2['gid']])->select();
+                    $json['goods'][$value2['cid']][] = $value2;
+                    //商家推荐
+                    if($value2['is_recommend'] === 1){
+                        $recommend[] = $value2;
                     }
                 }
+                //是否允许商家推荐
+                if($json['business_info']['recommend'] === 1){
+                    $json['business_info']['recommend'] = $recommend;
+                }else{
+                    $json['business_info']['recommend'] = [];
+                }
                 $final_json['data'] = $json;
-
                 return Response::create($final_json, 'json', 200, $this->header);
         }
     }
@@ -160,6 +178,7 @@ class Api extends Rest
 
     /**
      * 结算接口
+     * goods => ['good_id' => ['attribute_id' => $attribute_id,'number' => $number]];
      */
     public function settlement()
     {
@@ -177,6 +196,7 @@ class Api extends Rest
             'telephone' => trim(input('post.telephone')),
             'address' => trim(input('post.address')),
             'post_code' => trim(input('post.post_code')),
+            'comment' => trim(input(['post.comment']))
         ];
 
         if (!empty($params['goods']) && is_array($params['goods'])) {
@@ -200,18 +220,27 @@ class Api extends Rest
                 $BusinessToOrder->user_address = $params['address'];
                 $BusinessToOrder->user_post_code = $params['post_code'];
                 $BusinessToOrder->create_time = date('Y-m-d H:i:s');
+                $BusinessToOrder->comment = $params['comment'];
+                $BusinessToOrder->json = json_encode($params['json']);
                 if (!$BusinessToOrder->save()) {
                     throw new \Exception("订单创建失败1");
                 }
                 //订单记录表
-                foreach ($params['goods'] as $gid => $num) {
+                foreach ($params['goods'] as $gid => $attribute) {
                     $BusinessToGoods = BusinessToGoods::get($gid);
                     if ($BusinessToGoods) {
+                        $attributeObj = BusinessToGoodsAttributes::get($attribute['attribute_id']);
+                        if(empty($attributeObj)){
+                            //商品没有属性的情况
+                            $price = $BusinessToGoods->price;
+                        }else{
+                            $price = $attributeObj->price;
+                        }
                         $BusinessToOrdersGoods = new BusinessToOrdersGoods();
                         $BusinessToOrdersGoods->good_name = $BusinessToGoods->name;
-                        $BusinessToOrdersGoods->num = $num;
-                        $BusinessToOrdersGoods->price = $BusinessToGoods->price;
-                        $BusinessToOrdersGoods->total_price = bcmul($BusinessToGoods->price, $BusinessToOrdersGoods->num);
+                        $BusinessToOrdersGoods->num = $attribute['number'];
+                        $BusinessToOrdersGoods->price = $price;
+                        $BusinessToOrdersGoods->total_price = bcmul($price, $attribute['number']);
                         $BusinessToOrdersGoods->order_number = (int)$orderNumber;
                         $BusinessToOrdersGoods->create_time = date('Y-m-d H:i:s');
                         if (!$BusinessToOrdersGoods->save()) {
@@ -242,7 +271,10 @@ class Api extends Rest
         }
     }
 
-    public function getOrders()
+    /**
+     * 历史订单
+     */
+    public function allOrders()
     {
         switch ($this->method) {
             case 'get':
@@ -251,7 +283,7 @@ class Api extends Rest
                 $order_goods = [];
                 $orders = BusinessToOrders::where(['uid'=>$uid,'status'=>1])
                     ->join('business_to_orders_goods','business_to_orders_goods.order_number = business_to_orders.order_number')
-                    ->field('business_to_orders.order_number,business_to_orders.total_price as order_total_price,business_to_orders.create_time,business_to_orders_goods.good_name,business_to_orders_goods.num,business_to_orders_goods.price,business_to_orders_goods.total_price as good_total_price')
+                    ->field('business_to_orders.order_number,business_to_orders.total_price as order_total_price,business_to_orders.create_time,business_to_orders_goods.good_name,business_to_orders_goods.num,format(business_to_orders_goods.price,2) as price,business_to_orders_goods.total_price as good_total_price')
                     ->select()
                     ->toArray();
                 foreach($orders as $key =>$value){
@@ -260,8 +292,8 @@ class Api extends Rest
                         $data = [
                             'good_name' => $value['good_name'],
                             'num' => $value['num'],
-                            'price' => $value['price'],
-                            'good_total_price' => $value['good_total_price'],
+                            'price' => round($value['price'],2),
+                            'good_total_price' => round($value['good_total_price'],2),
                         ];
                         $order_goods[$value['order_number']]['goods'][] = $data;
                     }else{
@@ -274,8 +306,8 @@ class Api extends Rest
                                 [
                                     'good_name' => $value['good_name'],
                                     'num' => $value['num'],
-                                    'price' => $value['price'],
-                                    'good_total_price' => $value['good_total_price'],
+                                    'price' => round($value['price'],2),
+                                    'good_total_price' => round($value['good_total_price'],2),
                                 ]
                             ]
                         ];
@@ -312,41 +344,126 @@ class Api extends Rest
                     $final_json['json'] = input('post.json');
                     return Response::create($final_json, 'json', 200, $this->header);
                 }
-
         }
     }
 
-    public function getShoppingCartInfo()
+    /**
+     * 商家信息
+     */
+    private function getBusiness($bid = ''){
+        $businessObj = BusinessAccount::get($bid);
+        $business = [
+            'name' => $businessObj->name,
+            'bid' => $businessObj->bid,
+            'phone' =>  $businessObj->phone
+        ];
+        return $business;
+    }
+
+    /**
+     * 商品信息
+     */
+    private function getGoods($goods = []){
+        $total = 0;
+        $data = [];
+        $result = [];
+        foreach($goods as $gid => $value){
+            $good = BusinessToGoods::get($gid);
+            $data[$gid]['good_name'] = $good->name;
+            $data[$gid]['gid'] = $good->gid;
+            $data[$gid]['pic'] = $good->pic;
+            $data[$gid]['price'] = $good->price;
+
+            //属性信息
+            $attribute = BusinessToGoodsAttributes::get($value['attribute_id']);
+            if(!empty($attribute)){
+                $arr['id'] = $attribute->id;
+                $arr['title'] = $attribute->title;
+                $arr['price'] = $attribute->price;
+                $arr['number'] = $attribute->quantity;
+                $total_gbp = bcadd($attribute->price,$total,2);
+            }else{
+                //价格
+                $total_gbp = bcadd($good->price,$total,2);
+            }
+            $result[$gid]['attribute'] = !empty($attribute) ? $arr : [];
+        }
+        //商品
+        $result['goods'] = $data;
+        //总价
+        //英镑
+        $result['total']['gbp'] = $total_gbp;
+        //固定兑换人民币比例
+        $result['total']['cny'] = bcmul($total_gbp, 9,2);
+        return $result;
+    }
+
+    /**
+     * 骑手信息
+     */
+    private function getDeliveryman($order_number = ''){
+        return  (new OrderDeliveryman())->where(['order_number' => $order_number])->join('deliveryman','deliveryman.did = order_deliveryman.did')->field('did,telephone,name')->find();
+    }
+
+    /**
+     * 订单详情接口
+     * goods => ['good_id' => ['attribute_id' => $attribute_id,'number' => $number]];
+     */
+    public function getOrder()
     {
         switch ($this->method) {
             case 'get':
+                $result = [];
+                $param = [
+                    'bid' => trim(input('get.bid')),
+                    'goods' => json_decode(input('get.json'), true)
+                ];
+                //商家信息
+                $result['business'] = $this->getBusiness($param['bid']);
+                //物品信息
+                $goods = $this->getGoods($param['goods']);
+                $result['total'] = $goods['total'];
+                $result['goods'] = $goods['goods'];
+                return Response::create($result, 'json', 200, $this->header);
             case 'post':
-                $json_array = [];
-                $final_json = $this->output_json_template;
-                if ($this->method == 'get') {
-                    $json_array = json_decode(input('get.json'), true);
-                    $final_json['reason'] = "xxx1";
-                    $final_json['json'] = input('get.json');
-                } else {
-                    $json_array = json_decode(input('post.json'), true);
-                    $final_json['reason'] = "xxx2";
-                    $final_json['json'] = $_POST;
-                }
-
-                if (empty($json_array)) {
-                    return json($final_json, 200, $this->header);
-                }
-                $temp_array = [];
-//                key是商家bid
-                foreach ($json_array as $key => $value) {
-//                    商品列表
-                    $temp_array[$key] = $this->caculateTotalPrice($value, true);
-                }
-                $final_json['data'] = $temp_array;
-                $final_json['status'] = 1;
-                return json($final_json, 200, $this->header);
         }
-        echo $this->method;
+    }
+
+    /**
+     * 订单完成接口
+     */
+    public function completeOrder(){
+        switch ($this->method) {
+            case 'get':
+                $result = [];
+                $param = [
+                    'order_number' => trim(input('get.order_number'))
+                ];
+                $order = (new BusinessToOrders())->where(['order_number' => $param['order_number']])->find();
+                //商家信息
+                $result['business'] = $this->getBusiness($order->bid);
+                //物品信息
+                $goods = $this->getGoods($order->json);
+                $result['total'] = $goods['total'];
+                $result['goods'] = $goods['goods'];
+                //骑手信息
+                $result['deliveryman'] = $this->getDeliveryman($order->order_number);
+                //配送信息
+                $result['distribution'] = [
+                    'user_name' => $order->user_name,
+                    'user_post_code' => $order->user_post_code,
+                    'user_telephone' => $order->user_telephone,
+                    'user_address' => $order->user_address,
+                ];
+                //订单信息
+                $result['order'] = [
+                    'order_number' => $order->order_number,
+                    'create_time'  => $order->create_time
+                ];
+                return Response::create($result, 'json', 200, $this->header);
+            case 'post':
+                break;
+        }
     }
 
 //  type表示是否要返回除总价之外的其他信息,返回数据类型array

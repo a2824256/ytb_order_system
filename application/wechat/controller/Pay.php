@@ -68,7 +68,7 @@ class Pay extends Controller
         $this->checkParams($orderId);
         $this->getParams();
         $view = new View();
-        $data = ['jsApiParameters'=>$this->jsApiParameters,'successPayUrl' => 'http://business.szfengyuecheng.com/paySuccess','cancelUrl'=>'http://business.szfengyuecheng.com/payFail'];
+        $data = ['jsApiParameters'=>$this->jsApiParameters,'successPayUrl' => 'http://business.szfengyuecheng.com/?type=paysuc&uid='.$this->order->uid,'cancelUrl'=>'http://business.szfengyuecheng.com/?type=payfail&uid='.$this->order->uid];
         $view->assign('data',$data);
         return $view->fetch('pay');
     }
@@ -96,15 +96,16 @@ class Pay extends Controller
             exit('Your order has not been paid for more than 5 minutes, please re-order');
         }
         //获得英镑汇率
-        $Currency = $this->_businessCurrency->getDetailByFromAndTo('GBP','CNY');
+//        $Currency = $this->_businessCurrency->getDetailByFromAndTo('GBP','CNY');
         //最终汇率
-        $rate = bcadd($Currency->result,0.15,4);
+//        $rate = bcadd($Currency->result,0.15,4);
+        $rate = 9;
         //金额向上取整单位（元）
         $total_price = ceil(bcmul($this->order->total_price,$rate,2));
         //化为分
         $total_price = $total_price * 100;
         //测试专用
-        $total_price = 1;
+//        $total_price = 1;
         //使用jsapi接口
         try{
             $jsApi = new \JsApi_pub();
@@ -166,7 +167,7 @@ class Pay extends Controller
         //使用通用通知接口
         $notify = new \Notify_pub();
         //存储微信的回调
-            $xml = file_get_contents('php://input');
+        $xml = file_get_contents('php://input');
 //        $xml = "<xml><appid><![CDATA[wx007296fc9a7d315f]]></appid><bank_type><![CDATA[CFT]]></bank_type><cash_fee><![CDATA[1]]></cash_fee><fee_type><![CDATA[CNY]]></fee_type><is_subscribe><![CDATA[Y]]></is_subscribe><mch_id><![CDATA[1517605751]]></mch_id><nonce_str><![CDATA[n2zwk5unl1365d3axvg018via68biibc]]></nonce_str><openid><![CDATA[ohR9-5uW69zvsQPzBGpD47rWct9g]]></openid><out_trade_no><![CDATA[2019028]]></out_trade_no><result_code><![CDATA[SUCCESS]]></result_code><return_code><![CDATA[SUCCESS]]></return_code><sign><![CDATA[21400EA1AA389F07BF78E09A6C6343BE]]></sign><time_end><![CDATA[20181128200152]]></time_end><total_fee>1</total_fee><trade_type><![CDATA[JSAPI]]></trade_type><transaction_id><![CDATA[4200000198201811283819414168]]></transaction_id></xml>";
         $notify->saveData($xml);
 
@@ -205,10 +206,17 @@ class Pay extends Controller
                 $orderNo = $notify->data['out_trade_no'];
                 $this->checkParams($orderNo);
                 if($this->order->status == 0){
-                    //如果订单未支付则进入此逻辑
+                    //支付成功后订单未改支付状态则进入此逻辑
                     Db::startTrans();
                     try{
-                        $result = DB::table('business_to_orders')->where('order_number',$this->order->order_number)->update(['status' => 1]);
+                        //增加销售数量
+                        $order_param = DB::table('business_to_orders')->where('order_number',$this->order->order_number)->field('json')->find();
+                        $goods = json_decode($order_param['json'],true);
+                        foreach($goods as $gid => $attribute){
+                            DB::table('business_to_goods')->where(['gid' => $gid])->setInc('sell_quantity',$attribute['number']);
+                        }
+                        //修改支付状态
+                        $result = DB::table('business_to_orders')->where(['order_number' => $this->order->order_number])->update(['status' => 1]);
                         if(!$result){
                             throw new \Exception("openid:{$this->order->openid},error:{$this->order->getError()}");
                         }
