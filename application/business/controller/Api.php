@@ -2,11 +2,14 @@
 
 namespace app\business\controller;
 
+use app\business\model\BusinessToGoodsAttributes;
 use \think\controller\Rest;
 use \app\common\model\BusinessAccount;
 use \app\business\model\BusinessToOrdersGoods;
 use \app\business\model\BusinessToGoods;
 use \app\business\model\BusinessToGoodsClassifications;
+use think\Db;
+use think\Exception;
 use \think\Session;
 
 class Api extends Rest
@@ -53,6 +56,27 @@ class Api extends Rest
         }
     }
 
+    /**
+     * 删除商品属性
+     */
+    public function deleteAttribute(){
+        switch ($this->method){
+            case 'post':
+                $attribute_id = input('post.attribute_id');
+                if((new BusinessToGoodsAttributes())->where(['id' => $attribute_id])->setField('deleted',1)){
+                    $output_json = 1;
+                    return $this->response($output_json, 'json', 200);
+                }else{
+                    return $this->response(3, 'json', 200);
+                }
+        }
+    }
+
+    /**
+     * 添加商品
+     * 属性结构 [['title' => $title,'price' => 'price','gid' => $gid]...]
+     * @return \think\Response
+     */
     public function goods()
     {
         $output_json = $this->output_json_template;
@@ -67,21 +91,41 @@ class Api extends Rest
                     return $this->response($output_json, 'json', 200);
                 }
                 if (!input('?post.price')) {
-                    $output_json['status'] = 4;
+                    $output_json['status'] = 5;
                     return $this->response($output_json, 'json', 200);
                 }
-                $good = new BusinessToGoods;
-                $good->name = input('?post.name') ? input('post.name') : '';
-                $good->price = input('?post.price') ? input('post.price') : 0;
-                $good->info = input('?post.info') ? input('post.info') : '';
-                $good->cid = input('?post.cid') ? input('post.cid') : 0;
-                $good->pic = input('?post.photo') ? input('post.photo') : '';
-                $good->bid = input('?post.bid') ? input('post.bid') : 0;
-                $good->create_time = date('Y-m-d H:i:s', time());
-                if ($good->save()) {
-                    $output_json['status'] = 1;
+                Db::startTrans();
+                try{
+                    $good = new BusinessToGoods;
+                    $good->name = input('?post.name') ? input('post.name') : '';
+                    $good->price = input('?post.price') ? input('post.price') : 0;
+                    $good->info = input('?post.info') ? input('post.info') : '';
+                    $good->cid = input('?post.cid') ? input('post.cid') : 0;
+                    $good->pic = input('?post.photo') ? input('post.photo') : '';
+                    $good->bid = input('?post.bid') ? input('post.bid') : 0;
+                    $good->create_time = date('Y-m-d H:i:s', time());
+                    if (!$good->save()) {
+                        throw new Exception(6);
+                    }
+                    $attributes = input('?post.attribute') ? input('post.attribute') : [];
+                    if(!empty($attributes) && is_array($attributes)){
+                        foreach($attributes as $attr){
+                            $attribute = new BusinessToGoodsAttributes();
+                            $attribute->title = $attr['title'];
+                            $attribute->price = $attr['price'];
+                            $attribute->gid = $attr['gid'];
+                            if(!$attribute->save()){
+                                throw new Exception(6);
+                            }
+                        }
+                    }
+                    Db::commit();
+                    $output_json = 1;
+                    return $this->response($output_json, 'json', 200);
+                }catch (Exception $e){
+                    Db::rollback();
+                    return $this->response(6, 'json', 200);
                 }
-                return $this->response($output_json, 'json', 200);
         }
     }
 

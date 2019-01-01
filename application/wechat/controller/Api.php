@@ -102,6 +102,9 @@ class Api extends Rest
         }
     }
 
+    /**
+     * 分类及商品展示
+     */
     public function goodsAndClassList()
     {
         switch ($this->method) {
@@ -133,7 +136,7 @@ class Api extends Rest
                 $hot = $goods->where(['bid' => $bid])->field('name,price,pic,cid,gid,is_recommend')->order('sell_quantity desc,create_time desc')->limit(5)->select();
                 //热门商品属性赋值
                 foreach($hot as &$h){
-                    $h['attribute'] = $attribute->where(['gid' => $h['gid']])->select();
+                    $h['attribute'] = $attribute->where(['gid' => $h['gid'],'deleted' => 0])->select();
                 }
                 $json['goods']['0'] = $hot;
                 foreach($classes as $k=>$value){
@@ -142,7 +145,7 @@ class Api extends Rest
                 }
                 array_unshift($json['class_title'],['title' => '热门商品','id' => 0]);
                 foreach ($goods_list as $key => $value2) {
-                    $value2['attribute'] = $attribute->where(['gid' => $value2['gid']])->select();
+                    $value2['attribute'] = $attribute->where(['gid' => $value2['gid'],'deleted' => 0])->select();
                     $json['goods'][$value2['cid']][] = $value2;
                     //商家推荐
                     if($value2['is_recommend'] === 1){
@@ -270,6 +273,29 @@ class Api extends Rest
                 return Response::create($final_json, 'json', 200, $this->header);
         }
     }
+
+    /**
+     * 用户删除订单
+     */
+    public function deleteOrder(){
+        switch ($this->method) {
+            case 'post':
+                $param = [
+                    'uid' => trim(input('post.uid')),
+                    'order_number' => trim(input('post.order_number'))
+                ];
+                $order = (new BusinessToOrders())->where(['uid' => $param['uid'],'order_number' => $param['order_number'],'deleted' => 0])->find();
+                if(empty($order)){
+                    return Response::create(['errcode' => -1,'errmsg' => '找不到该订单'], 'json', 200, $this->header);
+                }
+                if((new BusinessToOrders())->where(['uid' => $param['uid'],'order_number' => $param['order_number'],'deleted' => 0])->setField('deleted',1)){
+                    return Response::create(['errcode' => 0,'errmsg' => '操作成功'], 'json', 200, $this->header);
+                }else{
+                    return Response::create(['errcode' => -1,'errmsg' => '操作失败'], 'json', 200, $this->header);
+                }
+        }
+    }
+
 
     /**
      * 历史订单
