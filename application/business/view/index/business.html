@@ -64,6 +64,10 @@
                         <label style="width: 100px;">consumption per person:</label>
                         <input id="cpc" type="text" value="{$info->cpc}" class="form-control" style="width: 300px"/>
                     </div>
+                    <div class="form-inline form-group">
+                        <label style="width: 100px;">Distribution price:</label>
+                        <input id="dp" type="text" value="{$info->dp}" class="form-control" style="width: 300px"/>
+                    </div>
                     <input id="bid" type="hidden" value="{$Think.session.bid}" />
                     <input type="button" onclick="updateInfo()" class="btn btn-success" value="Submit" style="margin-left: 100px;"/>
                 </form>
@@ -103,6 +107,7 @@
         params['end_hour'] = document.getElementById("end_hour").value;
         params['end_min'] = document.getElementById("end_min").value;
         params['cpc'] = document.getElementById("cpc").value;
+        params['dp'] = document.getElementById("dp").value;
         let res_arr = request('{:url("business/Api/updateInfo")}', params, 'post');
         res_arr.then((res)=>{
             if (res.code == 1) {

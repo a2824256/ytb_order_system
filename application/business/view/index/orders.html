@@ -23,58 +23,59 @@
         </div>
         <div class="clearfix"></div>
         <div class="col-md-12 col-sm-12 col-xs-12">
-        <div class="x_panel">
-            <div class="x_title">
-                <h2>Orders table</h2>
-                <!--<h2>Orders table <small>Bordered table subtitle</small></h2>-->
-                <ul class="nav navbar-right panel_toolbox">
-                    <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
-                    </li>
-                    <li><a class="close-link"><i class="fa fa-close"></i></a>
-                    </li>
-                </ul>
-                <div class="clearfix"></div>
-            </div>
-            <div class="x_content">
+            <div class="x_panel">
+                <div class="x_title">
+                    <h2>Orders table</h2>
+                    <!--<h2>Orders table <small>Bordered table subtitle</small></h2>-->
+                    <ul class="nav navbar-right panel_toolbox">
+                        <li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
+                        </li>
+                        <li><a class="close-link"><i class="fa fa-close"></i></a>
+                        </li>
+                    </ul>
+                    <div class="clearfix"></div>
+                </div>
+                <div class="x_content">
 
-                <table class="table table-striped jambo_table">
-                    <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Order</th>
-                        <th>Date</th>
-                        <th>Status</th>
-                        <th>Amount</th>
-                        <th>Customer name</th>
-                        <th>Phone</th>
-                        <th>Action</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {volist name="orders" id="vo"}
-                    <tr>
-                        <th scope="row">{$vo.oid}</th>
-                        <td>{$vo.order_number}</td>
-                        <td>{$vo.create_time}</td>
-                        <td>{$vo.status}</td>
-                        <td>£{$vo.total_price}</td>
-                        <td>{$vo.user_name}</td>
-                        <td>{$vo.user_telephone}</td>
-                        <td><a href="#" onclick="getOrdersDetail('{$vo.order_number}')">Detail</a><a
-                                style="margin-left: 30px" href="#">Print</a>
-                        </td>
-                    </tr>
-                    </tbody>
-                    {/volist}
-                </table>
-                {$orders->render()}
+                    <table class="table table-striped jambo_table">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Order</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Amount</th>
+                            <th>Customer name</th>
+                            <th>Phone</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {volist name="orders" id="vo"}
+                        <tr>
+                            <th scope="row">{$vo.oid} {eq name="$vo.step" value="0"}<span style="color:#4288ce">（新订单）</span>{/eq}</th>
+                            <td>{$vo.order_number}</td>
+                            <td>{$vo.create_time}</td>
+                            <td>{$vo.status}</td>
+                            <td>£{$vo.total_price}</td>
+                            <td>{$vo.user_name}</td>
+                            <td>{$vo.user_telephone}</td>
+                            <td><a href="#" onclick="getOrdersDetail('{$vo.order_number}')">Detail</a>
+                                <a style="margin-left: 30px" href="{:url('business/form/printOrder')}?oid={$vo.order_number}">Print</a>
+                                {eq name="$vo.step" value="0"}
+                                <a style="margin-left: 30px" href="{:url('business/form/operating')}?oid={$vo.order_number}&op=1">Confirm</a>
+                                <a style="margin-left: 30px" href="{:url('business/form/operating')}?oid={$vo.order_number}&op=2">Cancel</a>
+                                {/eq}
+                            </td>
+                        </tr>
+                        </tbody>
+                        {/volist}
+                    </table>
+                    {$orders->render()}
+                </div>
             </div>
         </div>
-
     </div>
-
-    </div>
-
 </div>
 </div>
 <!-- /page content -->
@@ -93,7 +94,7 @@
 </div>
 <!-- /order view -->
 
-
+<div id="getNewData"></div>
 <!-- footer content -->
 <footer>
     <div class="pull-right">
@@ -106,8 +107,13 @@
 </div>
 
 <!-- order view js-->
+<script src="__STATIC__/js/jquery.min.js"></script>
 <script src="/static/js/common.js"></script>
 <script>
+    setInterval(flash, 60000);
+    function flash() {
+        window.location.reload();
+    }
     function closeDiv(obj) {
         $(obj).hide();
         // $(window).unbind();
@@ -142,6 +148,49 @@
             }
         });
     }
+    // autoGetData();
+    function autoGetData(){
+        var oid = 70;
+        $.ajax({
+            //几个参数需要注意一下
+            type: "GET",//方法类型
+            dataType: "json",//预期服务器返回的数据类型
+            url: "{:url('business/index/autoGetData')}" ,//url
+            data: {oid:oid},
+            success: function (res) {
+                if (res.errcode == 0) {
+                    let ndiv = '';
+                    let j = 0;
+                    for(var i in res.data){
+                        let content = '';
+                        for (var n in res.data[i].goods) {
+                            content = content + '<li class="divider">' +
+                                '<span>' +
+                                '<font style="margin-right:20px;">' + res.data[i].goods[n]['good_name'] + '</font>' +
+                                '<font style="margin-right:20px;margin-left:20px;">x' + res.data[i].goods[n]['num'] + '</font>' +
+                                '<font style="margin-right:20px;margin-left:20px;">price:£' + res.data[i].goods[n]['price'] + '</font>' +
+                                '<font style="margin-left:20px;">total price:£' + res.data[i].goods[n]['goods_total_price'] + '</font>' +
+                                '</span>' +
+                                '</li>';
+                        }
+                        j = parseInt(i) + 1000;
+                        ndiv = ndiv + '<div class="box_data_'+res.data[i].order_number+'" style="z-index: '+j+';position: fixed;left: 50%;top: 50%;width: 800px;margin: -100px 0px 0px -420px;background: #e2e2e2;border-radius: 30px;padding:20px 20px;>' +
+                            '<h2>Detail</h2>' +
+                            '<div style="text-align:left">' +
+                            '<ul class="nav nav-list order_detail">' + content + '</ul>' +
+                            '<div style="text-align:center">' +
+                            '<button class="btn btn-warning" onclick="closeDiv(\'.box_data_'+res.data[i].order_number+'\')">Close</button>' + '</div></div>'+'</div>' ;
+                    }
+                    $('#getNewData').append(ndiv);
+                    displayDiv(".box_data_"+res.data[i].order_number);
+                } else {
+                    console.log(res.errmsg);
+                }
+            }
+        });
+
+    }
+
 </script>
 <!-- /order view js-->
 

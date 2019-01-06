@@ -7,7 +7,7 @@
     <title>Title</title>
 </head>
 <body style="background-size:cover;font-size: 16px;color: #fff;">
-<div style="width: 100%;height: 40px;background: black;color: #fff;text-align: center;">订单</div>
+<div style="width: 100%;height: 40px;background: black;color: #fff;text-align: center;line-height: 40px;">订单</div>
 <div style="background: white">
     <div class=" ">
         <div class=" " style="margin-bottom: 400px">
@@ -43,9 +43,15 @@
                         <h4 style="color: #666666">时间:{$vo.create_time}</h4>
                     </td>
                 </tr>
-                <tr>
+                <tr id="del_{$vo.oid}">
                     <td>
-                        <button class="ui-btn-lg ui-btn-primary" onclick="jump('{$vo.oid}')">确 认</button>
+                        <input type="hidden" value="{$vo.step}" id="step_{$vo.oid}" />
+                        {eq name="$vo.step" value="1" }
+                        <button class="ui-btn-lg ui-btn-primary btn_{$vo.oid}" onclick="jump('{$vo.oid}')">取 餐</button>
+                        {/eq}
+                        {eq name="$vo.step" value="3" }
+                        <button class="ui-btn-lg ui-btn-primary btn_{$vo.oid}" onclick="jump('{$vo.oid}')">送 达</button>
+                        {/eq}
                     </td>
                 </tr>
             </table>
@@ -54,10 +60,30 @@
         </div>
     </div>
 </div>
+<script src="__STATIC__/js/jquery.min.js" ></script>
 <script>
+    var url = "{:url('express/Form/updateOrder')}";
     function jump(id) {
-        const str = "{:url('express/Form/updateOrder')}";
-        window.location.href=str+"?id="+id;
+        var step = $('#step_'+id).val();
+        $.ajax({
+            type: "POST",
+            url:  url,
+            data: {id:id,step:step},// 你的formid
+            async: false,
+            success: function(result) {
+                console.log(result);
+                if(result.errcode == 0){
+                    $('#step_'+id).val(result.data);
+                    if(result.data == 3){
+                        $('.btn_'+id).html('送 达');
+                    }else{
+                        $('#del_'+id).empty();
+                    }
+                }else{
+                    alert(result.errmsg);
+                }
+            }
+        });
     }
 </script>
 </body>

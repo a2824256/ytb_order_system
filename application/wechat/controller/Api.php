@@ -24,8 +24,8 @@ use \app\business\model\BusinessToGoodsClassifications;
 
 class Api extends Rest
 {
-//    private $header = ["Access-Control-Allow-Method" => "*", "Access-Control-Allow-Origin" => "http://business.szfengyuecheng.com", "Access-Control-Allow-Credentials" => true, "Access-Control-Allow-Headers" => "Origin, X-Requested-With, Content-Type, Accept"];
-    private $header = ["Access-Control-Allow-Method" => "*", "Access-Control-Allow-Origin" => "http://127.0.0.1:8000", "Access-Control-Allow-Credentials" => true, "Access-Control-Allow-Headers" => "Origin, X-Requested-With, Content-Type, Accept"];
+   private $header = ["Access-Control-Allow-Method" => "*", "Access-Control-Allow-Origin" => "http://business.szfengyuecheng.com", "Access-Control-Allow-Credentials" => true, "Access-Control-Allow-Headers" => "Origin, X-Requested-With, Content-Type, Accept"];
+//     private $header = ["Access-Control-Allow-Method" => "*", "Access-Control-Allow-Origin" => "http://127.0.0.1:8000", "Access-Control-Allow-Credentials" => true, "Access-Control-Allow-Headers" => "Origin, X-Requested-With, Content-Type, Accept"];
     private $output_json_template = [
         'status' => 0
     ];
@@ -44,6 +44,18 @@ class Api extends Rest
      * 订单号
      */
     private $_orderNumberModel;
+
+    /**
+     * 订单流程参数枚举
+     */
+    private $_step = [
+        0 => '等待商家接单',
+        1 => '商家已确认',
+        2 => '商家取消订单',
+        3 => '骑手已取餐',
+        4 => '骑手已送达',
+        5 => '订单已取消',
+    ];
 
     /**
      * 初始化
@@ -194,12 +206,12 @@ class Api extends Rest
         $uid = trim(input('post.uid'));
         $params = [
             'bid' => trim(input('post.bid')),
-            'goods' => json_decode(input('post.json'), true),
+            'goods' => json_decode(input('post.goods'), true),
             'name' => trim(input('post.name')),
             'telephone' => trim(input('post.telephone')),
             'address' => trim(input('post.address')),
             'post_code' => trim(input('post.post_code')),
-            'comment' => trim(input(['post.comment']))
+            'comment' => trim(input('post.comment'))
         ];
 
         if (!empty($params['goods']) && is_array($params['goods'])) {
@@ -215,8 +227,9 @@ class Api extends Rest
                 $BusinessToOrder->bid = $params['bid'];
                 $BusinessToOrder->order_number = (int)$orderNumber;
                 $BusinessToOrder->uid = $User->uid;
-                $BusinessToOrder->total_price = $this->caculateTotalPrice($params['goods'])["total_price"];
-                $BusinessToOrder->total_price_chy = bcmul($Currency->result, (string)$BusinessToOrder->total_price);
+                $BusinessToOrder->total_price = $this->caculateTotalPrice($params['goods'])["total_price"] * 100 + 200;
+//                $BusinessToOrder->total_price_cny = bcmul($Currency->result, (string)$BusinessToOrder->total_price);
+                $BusinessToOrder->total_price_cny = bcmul(9, (string)$BusinessToOrder->total_price);
                 $BusinessToOrder->exchange_rate = $Currency->result;
                 $BusinessToOrder->user_name = $params['name'];
                 $BusinessToOrder->user_telephone = $params['telephone'];
@@ -224,7 +237,7 @@ class Api extends Rest
                 $BusinessToOrder->user_post_code = $params['post_code'];
                 $BusinessToOrder->create_time = date('Y-m-d H:i:s');
                 $BusinessToOrder->comment = $params['comment'];
-                $BusinessToOrder->json = json_encode($params['json']);
+                $BusinessToOrder->json = json_encode($params['goods']);
                 if (!$BusinessToOrder->save()) {
                     throw new \Exception("订单创建失败1");
                 }
@@ -240,10 +253,12 @@ class Api extends Rest
                             $price = $attributeObj->price;
                         }
                         $BusinessToOrdersGoods = new BusinessToOrdersGoods();
+                        $BusinessToOrdersGoods->good_id = $gid;
+                        $BusinessToOrdersGoods->attribute_id = $attribute['attribute_id'];
                         $BusinessToOrdersGoods->good_name = $BusinessToGoods->name;
                         $BusinessToOrdersGoods->num = $attribute['number'];
                         $BusinessToOrdersGoods->price = $price;
-                        $BusinessToOrdersGoods->total_price = bcmul($price, $attribute['number']);
+                        $BusinessToOrdersGoods->total_price = bcmul($price, $attribute['number'],2);
                         $BusinessToOrdersGoods->order_number = (int)$orderNumber;
                         $BusinessToOrdersGoods->create_time = date('Y-m-d H:i:s');
                         if (!$BusinessToOrdersGoods->save()) {
@@ -309,10 +324,12 @@ class Api extends Rest
                 $order_goods = [];
                 $orders = BusinessToOrders::where(['uid'=>$uid,'status'=>1])
                     ->join('business_to_orders_goods','business_to_orders_goods.order_number = business_to_orders.order_number')
-                    ->field('business_to_orders.order_number,business_to_orders.total_price as order_total_price,business_to_orders.create_time,business_to_orders_goods.good_name,business_to_orders_goods.num,format(business_to_orders_goods.price,2) as price,business_to_orders_goods.total_price as good_total_price')
+                    ->field('business_to_orders.step,business_to_orders_goods.good_id,business_to_orders_goods.attribute_id,business_to_orders.order_number,business_to_orders.total_price as order_total_price,business_to_orders.create_time,business_to_orders_goods.good_name,business_to_orders_goods.num,format(business_to_orders_goods.price,2) as price,business_to_orders_goods.total_price as good_total_price')
                     ->select()
                     ->toArray();
+              
                 foreach($orders as $key =>$value){
+                    $attribute = BusinessToGoodsAttributes::get($value['attribute_id']);
                     if(array_key_exists($value['order_number'],$order_goods)){
                         //存在多条账单时处理逻辑
                         $data = [
@@ -320,13 +337,15 @@ class Api extends Rest
                             'num' => $value['num'],
                             'price' => round($value['price'],2),
                             'good_total_price' => round($value['good_total_price'],2),
+                            'attribute_name' => !empty($attribute) ? $attribute->title : '',
                         ];
                         $order_goods[$value['order_number']]['goods'][] = $data;
                     }else{
                         //添加第一条订单数据
                         $data = [
+                            'step' => $this->_step[$value['step']],
                             'order_number' => $value['order_number'],
-                            'order_total_price' => $value['order_total_price'],
+                            'order_total_price' => $value['order_total_price'] / 100,
                             'create_time' => $value['create_time'],
                             'goods' => [
                                 [
@@ -334,6 +353,7 @@ class Api extends Rest
                                     'num' => $value['num'],
                                     'price' => round($value['price'],2),
                                     'good_total_price' => round($value['good_total_price'],2),
+                                    'attribute_name' => !empty($attribute) ? $attribute->title : '',
                                 ]
                             ]
                         ];
@@ -412,7 +432,7 @@ class Api extends Rest
                 //价格
                 $total_gbp = bcadd($good->price,$total,2);
             }
-            $result[$gid]['attribute'] = !empty($attribute) ? $arr : [];
+            $data[$gid]['attribute'] = !empty($attribute) ? $arr : [];
         }
         //商品
         $result['goods'] = $data;
@@ -442,7 +462,7 @@ class Api extends Rest
                 $result = [];
                 $param = [
                     'bid' => trim(input('get.bid')),
-                    'goods' => json_decode(input('get.json'), true)
+                    'goods' => json_decode(input('get.goods'), true)
                 ];
                 //商家信息
                 $result['business'] = $this->getBusiness($param['bid']);
@@ -470,7 +490,7 @@ class Api extends Rest
                 $result['business'] = $this->getBusiness($order->bid);
                 //物品信息
                 $goods = $this->getGoods($order->json);
-                $result['total'] = $goods['total'];
+                $result['total'] = ['gbp' => $order['total_price'] / 100,'cny' => $order['total_price_cny'] / 100];
                 $result['goods'] = $goods['goods'];
                 //骑手信息
                 $result['deliveryman'] = $this->getDeliveryman($order->order_number);
@@ -507,12 +527,19 @@ class Api extends Rest
         $goods_list = [];
         foreach ($goods_info as $key => $value) {
             if (isset($json_array[$value['gid']])) {
-                $total_price += $value['price'] * $json_array[$value['gid']];
+                //查询属性
+                $attribute = BusinessToGoodsAttributes::get($json_array[$value['gid']]['attribute_id']);
+                if(!empty($attribute)){
+                    //不等于空则采用属性的价格
+                    $value['price'] = $attribute['price'];
+                }
+                $total_price += $value['price'] * $json_array[$value['gid']]['number'];
                 if ($type) {
-                    $goods_list[$value['gid']] = new \ArrayObject(['value'=>$value['gid'],'label' => $value['name'], 'num' => $json_array[$value['gid']], 'price'=>$value['price']]);
+                    $goods_list[$value['gid']] = new \ArrayObject(['value'=>$value['gid'],'label' => $value['name'], 'num' => $json_array[$value['gid']]['number'], 'price'=>$value['price'],'attribute_name' => $attribute['title'],'attribute_id' => $json_array[$value['gid']]['attribute_id']]);
                 }
             }
         }
+
 //        结果
         $res['total_price'] = $total_price;
         if ($type) {

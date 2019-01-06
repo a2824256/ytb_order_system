@@ -120,11 +120,11 @@ class Api extends Rest
                         }
                     }
                     Db::commit();
-                    $output_json = 1;
+                    $output_json = ['status' => 1];
                     return $this->response($output_json, 'json', 200);
                 }catch (Exception $e){
                     Db::rollback();
-                    return $this->response(6, 'json', 200);
+                    return $this->response(['status' => $e->getMessage()], 'json', 200);
                 }
         }
     }

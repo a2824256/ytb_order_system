@@ -1,12 +1,13 @@
 <?php
 namespace app\express\controller;
 
+use \app\express\model\BusinessToOrders;
 use \think\Controller;
 use \think\Session;
 use \app\express\model\Deliveryman;
-use \app\business\model\BusinessToOrders;
 class Form extends Controller
 {
+
     public function login(){
         $acc = input('post.acc');
         $pwd = input('post.pwd');
@@ -23,16 +24,35 @@ class Form extends Controller
         }
     }
 
+    /**
+     * 流程代码修改
+    */
     public function updateOrder(){
-        $id = input('get.id');
+        $id = input('post.id');
+        $step = intval(input('post.step'));
         if(empty($id)){
-            $this->error("错误操作!");
+            return json(['errcode' => -1,'errmsg' => '操作失败1']);
         }
-        $res = BusinessToOrders::where(["oid"=>$id])->update(['status'=>2]);
-        if($res){
-            $this->success("操作成功!");
+        if(!in_array($step,[1,3,4])){
+            return json(['errcode' => -2,'errmsg' => '参数错误']);
+        }
+        $model = new BusinessToOrders();
+        $businessToOrders = $model->getModelById($id);
+        if($businessToOrders->step > $step){
+            return json(['errcode' => -3,'errmsg' => '其他骑手已操作，无须重复操作,请刷新页面查看']);
+        }
+        if($step === 1){
+            $data = 3;
+        }
+        if($step === 3){
+            $data = 4;
+        }
+
+        if($model->where(['oid' => $id])->setField('step',$data)){
+            return json(['errcode' => 0, 'errmsg' => 'ok','data' => $data]);
         }else{
-            $this->success("操作失败!");
+            return json(['errcode' => -1,'errmsg' => '操作失败2']);
         }
     }
+
 }

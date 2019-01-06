@@ -28,7 +28,8 @@ class Api
         foreach ($goods as $key => $value) {
             $string .= "<0D0A>" . $value['good_name'] . "  x" . $value['num'] . "  ￡" . $value['total_price'];
         }
-        $string .= "<0D0A>总计： ￡" . $order['total_price'] . "<0D0A>备注: " . $order['comment'] . "<0D0A>订单号: ytb" . $order['order_number'] . "<0D0A>下单时间: " . $order['create_time'] . "<0D0A><0D0A><0D0A><0D0A><0D0A><0D0A><0D0A><0D0A>";
+        $string .= "<0D0A>配送费： ￡2";
+        $string .= "<0D0A>总计： ￡" . $order['total_price']  / 100 . "<0D0A>备注: " . $order['comment'] . "<0D0A>订单号: ytb" . $order['order_number'] . "<0D0A>下单时间: " . $order['create_time'] . "<0D0A><0D0A><0D0A><0D0A><0D0A><0D0A><0D0A><0D0A>";
         $device_arr = explode(',', $business['device_id']);
         $ch = curl_init();
         foreach ($device_arr as $value2) {

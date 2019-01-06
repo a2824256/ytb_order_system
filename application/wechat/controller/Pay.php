@@ -8,14 +8,18 @@
 
 namespace app\wechat\controller;
 
+use app\common\model\BusinessAccount;
 use app\wechat\model\BusinessCurrency;
 use app\wechat\model\BusinessToOrders;
+use app\wechat\model\BusinessToOrdersGoods;
+use EasyWeChat\Factory;
 use think\Controller;
 use think\Db;
 use think\Loader;
 use think\controller\Rest;
 use think\Request;
 use think\View;
+
 
 class Pay extends Controller
 {
@@ -99,11 +103,10 @@ class Pay extends Controller
 //        $Currency = $this->_businessCurrency->getDetailByFromAndTo('GBP','CNY');
         //最终汇率
 //        $rate = bcadd($Currency->result,0.15,4);
-        $rate = 9;
+//        $rate = 9;
         //金额向上取整单位（元）
-        $total_price = ceil(bcmul($this->order->total_price,$rate,2));
-        //化为分
-        $total_price = $total_price * 100;
+//        $total_price = ceil(bcmul($this->order->total_price_cny,$rate,2));
+         $total_price = $this->order->total_price_cny;
         //测试专用
 //        $total_price = 1;
         //使用jsapi接口
@@ -167,7 +170,7 @@ class Pay extends Controller
         //使用通用通知接口
         $notify = new \Notify_pub();
         //存储微信的回调
-        $xml = file_get_contents('php://input');
+            $xml = file_get_contents('php://input');
 //        $xml = "<xml><appid><![CDATA[wx007296fc9a7d315f]]></appid><bank_type><![CDATA[CFT]]></bank_type><cash_fee><![CDATA[1]]></cash_fee><fee_type><![CDATA[CNY]]></fee_type><is_subscribe><![CDATA[Y]]></is_subscribe><mch_id><![CDATA[1517605751]]></mch_id><nonce_str><![CDATA[n2zwk5unl1365d3axvg018via68biibc]]></nonce_str><openid><![CDATA[ohR9-5uW69zvsQPzBGpD47rWct9g]]></openid><out_trade_no><![CDATA[2019028]]></out_trade_no><result_code><![CDATA[SUCCESS]]></result_code><return_code><![CDATA[SUCCESS]]></return_code><sign><![CDATA[21400EA1AA389F07BF78E09A6C6343BE]]></sign><time_end><![CDATA[20181128200152]]></time_end><total_fee>1</total_fee><trade_type><![CDATA[JSAPI]]></trade_type><transaction_id><![CDATA[4200000198201811283819414168]]></transaction_id></xml>";
         $notify->saveData($xml);
 
@@ -227,6 +230,9 @@ class Pay extends Controller
                         if($printerResult != 'OK'){
                             self::logResult("【打印信息报错】:".$this->order->openid);
                         }
+                        //推送模板消息
+                        $this->sendTempMsg($this->order->openid, 1, $this->order->order_number);
+                        $this->sendTempMsg($this->order->openid, 3, $this->order->order_number);
                         //此处应该更新一下订单状态，商户自行增删操作
                         self::logResult("【支付成功】:".$xml);
                     }catch(\Exception $e){
@@ -257,6 +263,73 @@ class Pay extends Controller
         $json = json_encode($text,JSON_UNESCAPED_UNICODE)."\n";
         fwrite($fp, $json);
         fclose($fp);
+    }
+
+    /**
+     * @param $openid openid
+     * @param $type 消息类型，1：用户支付成功，2：订单状态改变，3:商家新订单提醒，4：骑手派送提醒
+     * @param $orderNumber 订单号
+     */
+    private function sendTempMsg($openid, $type, $orderNumber)
+    {
+        $config = [
+            'app_id' => 'wx007296fc9a7d315f',
+            'secret' => '50ddb0815ab75971d407f4218222675c',
+            'response_type' => 'array',
+        ];
+        $app = Factory::officialAccount($config);
+        $template_id = '';
+        $data = [];
+        $order_info = BusinessToOrders::where(['order_number' => $orderNumber])->find();
+        $business = BusinessAccount::where(['bid' => $order_info['bid']])->find();
+        $price = $order_info['total_price'] / 100;
+        $total_price_cny = $order_info['total_price_cny'] / 100;
+        $good = BusinessToOrdersGoods::where(['order_number' => $orderNumber])->find();
+        switch ($type) {
+            case 1:
+                $template_id = '1f7cb5Q180yncUHJEMKzeMuEh_fvA1-OB1D_twLB10I';
+                $data = [
+                    'first' => '您的订单下单成功',
+                    'keyword1' => $business['name'],
+                    'keyword2' => $order_info['create_time'],
+                    'keyword3' => $good['good_name'] . "等商品",
+                    'keyword4' => $price . "磅（折合人民币" . $total_price_cny . "元）",
+                    'remark' => '约20分送达，请保持手机畅通',
+                ];
+                break;
+            case 3:
+                if ($business['manager'] == NULL) {
+                    return 0;
+                }
+                $template_id = '0sXUoZ3cLosExmWEopcYXkk2jUHqo5lv6Dwi9ALzIOI';
+                $data = [
+                    'first' => '您有一份新的订单,编号为' . $order_info['order_number'],
+                    'keyword1' => $good['good_name'] . "等商品",
+                    'keyword2' => $price . '磅',
+                    'keyword3' => $order_info['user_name'] . ',' . $order_info['user_telephone'] . ',' . $order_info['user_address'] . ',' . $order_info['user_post_code'],
+                    'keyword4' => '微信支付',
+                    'keyword5' => '无',
+                    'remark' => '下单时间：' . $order_info['create_time'],
+                ];
+                break;
+        }
+        $final_data = [];
+        if ($type == 1) {
+            $final_data = [
+                'touser' => $openid,
+                'template_id' => $template_id,
+                'data' => $data,
+            ];
+        } elseif ($type == 3) {
+            $final_data = [
+                'touser' => $business['manager'],
+                'template_id' => $template_id,
+                'data' => $data,
+                "url" => "http://www.szfengyuecheng.com/wechatbusiness/index/index/orderNumber/" . $orderNumber . "/openid/" . $openid,
+            ];
+        }
+        $res = $app->template_message->send($final_data);
+        return $res;
     }
 
 

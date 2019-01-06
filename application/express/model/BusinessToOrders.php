@@ -1,5 +1,5 @@
 <?php
-namespace app\wechat\model;
+namespace app\express\model;
 
 use think\Model;
 
@@ -11,6 +11,13 @@ class BusinessToOrders extends Model
     protected $table = 'business_to_orders';
 
     protected $autoWriteTimestamp = 'datetime';
+
+    /**
+     * 获取订单实例
+     */
+    public function getModelById($oid){
+        return BusinessToOrders::where(['oid' => $oid])->find();
+    }
 
     /**
      * 获取订单实例
