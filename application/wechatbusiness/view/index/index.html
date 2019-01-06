@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="cn">
+<head>
+    <meta charset="UTF-8">
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, initial-scale=1.0, user-scalable=no">
+    <title>订单详情</title>
+    <link rel="stylesheet" href="http://i.gtimg.cn/vipstyle/frozenui/2.0.0/css/frozen.css">
+</head>
+<body>
+<section class="ui-container">
+    <div class="index-wrap">
+        <div class="ui-panel ui-panel-center ui-border-tb">
+            <h3 class="">
+                用户信息
+            </h3>
+        </div>
+        <div>
+            <ul class="ui-list ui-list-single ui-border-tb">
+                <li class="ui-border-t">
+                    <div class="ui-list-info">
+                        <h4 class="ui-nowrap">
+                            姓名(Name)
+                        </h4>
+                        <div class="ui-txt-info">
+                            {$info.user_name}
+                        </div>
+                    </div>
+                </li>
+                <li class="ui-border-t">
+                    <div class="ui-list-info">
+                        <h4 class="ui-nowrap">
+                            地址(Address)
+                        </h4>
+                        <div class="ui-txt-info">
+                            {$info.user_address}
+                        </div>
+                    </div>
+                </li>
+                <li class="ui-border-t">
+                    <div class="ui-list-info">
+                        <h4 class="ui-nowrap">
+                            手机(Telephone)
+                        </h4>
+                        <div class="ui-txt-info">
+                            {$info.user_telephone}
+                        </div>
+                    </div>
+                </li>
+                <li class="ui-border-t">
+                    <div class="ui-list-info">
+                        <h4 class="ui-nowrap">
+                            邮编(Post code)
+                        </h4>
+                        <div class="ui-txt-info">
+                            {$info.user_post_code}
+                        </div>
+                    </div>
+                </li>
+                <li class="ui-border-t">
+                    <div class="ui-list-info">
+                        <h4 class="ui-nowrap">
+                            下单时间(Time)
+                        </h4>
+                        <div class="ui-txt-info">
+                            {$info.create_time}
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <br/>
+        <div class="ui-panel ui-panel-center ui-border-tb">
+            <h3 class="">
+                订单详情
+            </h3>
+        </div>
+        <div>
+            <ul class="ui-list ui-list-single ui-border-tb">
+                {volist name="order" id="vo"}
+                <li class="ui-border-t">
+                    <div class="ui-list-info">
+                        <h4 class="ui-nowrap">
+                            {$vo.good_name}
+                        </h4>
+                        <div class="ui-txt-info">
+                            <span style="color: #ff2332;padding-right: 20px">数量：x {$vo.num}</span> 合计：£
+                            {$vo.good_total_price}
+                        </div>
+                    </div>
+                </li>
+                {/volist}
+            </ul>
+        </div>
+        <br/>
+        <div class="ui-panel ui-panel-center ui-border-tb">
+            <h3 class="">
+                操作
+            </h3>
+        </div>
+        <div style="padding: 10px 10px;">
+            {eq name="status" value="1"}
+            {lt name="step" value="2"}
+            <button class="ui-btn-lg" onclick="confirmOrder(3)">确认订单</button>
+            <br>
+            {/lt}
+            {eq name="step" value="3"}
+            <button class="ui-btn-lg ui-btn-primary" onclick="confirmOrder(4)">订单已送达</button>
+            <br>
+            {/eq}
+            {eq name="step" value="0"}
+            <button class="ui-btn-lg ui-btn-danger" onclick="confirmOrder(2)">取消订单</button>
+            {/eq}
+            {eq name="step" value="4"}
+            <button class="ui-btn-lg disabled">订单已完成</button>
+            {/eq}
+            {else/}
+            <button class="ui-btn-lg disabled">订单尚未付款</button>
+            {/eq}
+        </div>
+    </div>
+</section>
+</body>
+<script>
+    function confirmOrder(type) {
+        let res = confirm("请再次确认是否执行该操作");
+        let openid = '{$openid}';
+        let onum = '{$onum}';
+        if (res) {
+            window.location.href = "http://www.szfengyuecheng.com/wechatbusiness/index/operating/oid/" + onum + "/openid/" + openid + "/type/" + type;
+        }
+    }
+</script>
+</html>
