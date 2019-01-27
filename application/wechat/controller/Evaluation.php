@@ -21,7 +21,7 @@ class Evaluation extends Rest
      * 限制数量
      * @var int
      */
-    const limit = 5;
+    private $limit = 5;
 
     /**
      * 评价列表
@@ -36,7 +36,7 @@ class Evaluation extends Rest
                 //计算开始偏移量
                 $start = ($param['page'] - 1) * limit;
                 $evaluationObj = new \app\wechat\model\Evaluation();
-                $list = $evaluationObj->where(['bid' => $param['bid']])->limit($start,limit)->select();
+                $list = $evaluationObj->where(['bid' => $param['bid']])->limit($start,$this->limit)->select();
                 foreach($list as &$val){
                     $val['pic_arr'] = json_decode($val['pic_arr']);
                 }

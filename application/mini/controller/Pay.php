@@ -6,28 +6,21 @@
  * Time: 22:02
  */
 
-namespace app\wechat\controller;
+namespace app\mini\controller;
 
-use app\common\model\BusinessAccount;
-use app\wechat\model\BusinessCurrency;
-use app\wechat\model\BusinessToOrders;
-use app\wechat\model\BusinessToOrdersGoods;
+use app\mini\controller\Api;
 use EasyWeChat\Factory;
-use think\Controller;
 use think\Db;
 use think\Loader;
-use think\controller\Rest;
-use think\Request;
-use think\View;
+use \think\Response;
 
-
-class Pay extends Controller
+class Pay extends Api
 {
 
     /**
      * @var string 支付回调地址
      */
-    private $notifyUrl = 'https://www.szfengyuecheng.com/wechat/pay/notify';
+    private $notifyUrl = 'https://www.szfengyuecheng.com/mini/pay/notify';
 
     /**
      * @var string 订单详情数据
@@ -40,24 +33,17 @@ class Pay extends Controller
     private $jsApiParameters = [];
 
     /**
-     * @var object 订单表实例
+     * 错误信息搜集
      */
-    private $_businessToOrders;
-
-    /**
-     * @var object 汇率表实例
-     */
-    private $_businessCurrency;
+    private $errorPay = '';
 
     /**
      * 初始化
      */
-    public function __construct(BusinessToOrders $businessToOrders, BusinessCurrency $businessCurrency)
+    public function __construct()
     {
-        $this->_businessCurrency = $businessCurrency;
-        $this->_businessToOrders = $businessToOrders;
         //引入WxPayPubHelper
-        Loader::import('WxPayPubHelper/WxPayPubHelper');
+        Loader::import('WxPayPubHelperApplets/WxPayPubHelper');
         parent::__construct();
     }
 
@@ -66,30 +52,33 @@ class Pay extends Controller
      */
     public function getPayOrder()
     {
-        if (!Request::instance()->isGet()) {
-            exit('error method!');
+        switch ($this->method){
+            case 'post':
+                $user = $this->getUser();
+                if(empty($user)){
+                    return Response::create(['code' => 401,'status' => 0, 'msg' => '用户不存在'], 'json', 200);
+                }
+                $order_number = input('post.order_number');
+                if(!$this->checkParams($order_number)){
+                    return Response::create(['code' => 402,'status' => 0, 'msg' => '参数不正确'], 'json', 200);
+                }
+                if(!$this->getParams()){
+                    return Response::create(['code' => 405,'status' => 0, 'msg' => $this->errorPay], 'json', 200);
+                }
+                return Response::create(['code' => 200,'status' => 1, 'msg' => '操作成功','data' => json_decode($this->jsApiParameters,true)], 'json', 200);
         }
-        $orderId = input('get.orderId');
-        $this->checkParams($orderId);
-        $this->getParams();
-        $view = new View();
-        $data = ['jsApiParameters' => $this->jsApiParameters, 'successPayUrl' => 'https://business.szfengyuecheng.com/?type=paysuc&uid=' . $this->order->uid, 'cancelUrl' => 'https://business.szfengyuecheng.com/?type=payfail&uid=' . $this->order->uid];
-        $view->assign('data', $data);
-        return $view->fetch('pay');
     }
 
     /**
      * 检测参数并赋值
      */
-    private function checkParams($orderId)
+    private function checkParams($order_number)
     {
-        if (empty($orderId))
-            exit('orderId is not empty');
-
-        $order = $this->_businessToOrders->getModelByOrderId($orderId);
-        if (!$order)
-            exit('The order does not exist, please check if the order number is incorrect.');
-        $this->order = $order;
+        if (empty($order_number)) return false;
+        $order = Db::table('order')->join('user_mini_info','user_mini_info.uid = order.uid')->where(['order_number' => $order_number])->field('user_mini_info.order_openid,order.*')->find();
+        if (!$order) return false;
+        $this->order = json_decode(json_encode($order));
+        return true;
     }
 
     /**
@@ -99,7 +88,8 @@ class Pay extends Controller
     {
         //五分钟支付限制
         if (time() - strtotime($this->order->create_time) > 300) {
-            exit('Your order has not been paid for more than 5 minutes, please re-order');
+            $this->errorPay = '订单支付时间超过5分钟';
+            return false;
         }
         //获得英镑汇率
 //        $Currency = $this->_businessCurrency->getDetailByFromAndTo('GBP','CNY');
@@ -110,7 +100,7 @@ class Pay extends Controller
 //        $total_price = ceil(bcmul($this->order->total_price_cny,$rate,2));
         $total_price = $this->order->total_price_cny;
         //测试专用
-//        $total_price = 1;
+        $total_price = 1;
         //使用jsapi接口
         try {
             $jsApi = new \JsApi_pub();
@@ -139,7 +129,7 @@ class Pay extends Controller
             //noncestr已填,商户无需重复填写
             //spbill_create_ip已填,商户无需重复填写
             //sign已填,商户无需重复填写
-            $unifiedOrder->setParameter("openid", $this->order->openid);//商品描述
+            $unifiedOrder->setParameter("openid", $this->order->order_openid);//商品描述
             $unifiedOrder->setParameter("body", "外卖订餐");//商品描述
             //自定义订单号，此处仅作举例
             $unifiedOrder->setParameter("out_trade_no", $this->order->order_number);//商户订单号
@@ -159,8 +149,10 @@ class Pay extends Controller
             //=========步骤3：使用jsapi调起支付============
             $jsApi->setPrepayId($prepay_id);
             $this->jsApiParameters = $jsApi->getParameters();
+            return true;
         } catch (\Exception $e) {
-            exit($e->getMessage());
+            $this->errorPay = $e->getMessage();
+            return false;
         }
     }
 
@@ -175,7 +167,6 @@ class Pay extends Controller
         $xml = file_get_contents('php://input');
 //        $xml = "<xml><appid><![CDATA[wx007296fc9a7d315f]]></appid><bank_type><![CDATA[CFT]]></bank_type><cash_fee><![CDATA[1]]></cash_fee><fee_type><![CDATA[CNY]]></fee_type><is_subscribe><![CDATA[Y]]></is_subscribe><mch_id><![CDATA[1517605751]]></mch_id><nonce_str><![CDATA[n2zwk5unl1365d3axvg018via68biibc]]></nonce_str><openid><![CDATA[ohR9-5uW69zvsQPzBGpD47rWct9g]]></openid><out_trade_no><![CDATA[2019028]]></out_trade_no><result_code><![CDATA[SUCCESS]]></result_code><return_code><![CDATA[SUCCESS]]></return_code><sign><![CDATA[21400EA1AA389F07BF78E09A6C6343BE]]></sign><time_end><![CDATA[20181128200152]]></time_end><total_fee>1</total_fee><trade_type><![CDATA[JSAPI]]></trade_type><transaction_id><![CDATA[4200000198201811283819414168]]></transaction_id></xml>";
         $notify->saveData($xml);
-
         //验证签名，并回应微信。
         //对后台通知交互时，如果微信收到商户的应答不是成功或超时，微信认为通知失败，
         //微信会通过一定的策略（如30分钟共8次）定期重新发起通知，
@@ -212,29 +203,29 @@ class Pay extends Controller
                     Db::startTrans();
                     try {
                         //增加销售数量
-                        $order_param = DB::table('business_to_orders')->where('order_number', $this->order->order_number)->field('json')->find();
+                        $order_param = Db::table('order')->where('order_number', $this->order->order_number)->field('json')->find();
                         $goods = json_decode($order_param['json'], true);
-                        foreach ($goods as $gid => $attribute) {
-                            DB::table('business_to_goods')->where(['gid' => $gid])->setInc('sell_quantity', $attribute['number']);
+                        foreach ($goods as $good) {
+                            Db::table('business_to_goods')->where(['gid' => $good['gid']])->setInc('sell_quantity', $good['number']);
                         }
                         //修改支付状态
-                        $result = DB::table('business_to_orders')->where(['order_number' => $this->order->order_number])->update(['status' => 1]);
+                        $result = Db::table('order')->where(['order_number' => $this->order->order_number])->update(['status' => 1]);
                         if (!$result) {
-                            throw new \Exception("openid:{$this->order->openid},error:{$this->order->getError()}");
+                            throw new \Exception("order_openid:{$this->order->order_openid},error:{$this->order->getError()}");
                         }
                         Db::commit();
                         //打印订单
                         $printer = new \app\printer\controller\Api();
                         $printerResult = $printer->printOrder($this->order->order_number);
                         if ($printerResult != 'OK') {
-                            self::logResult("【打印信息报错】:" . $this->order->openid);
+                            self::logResult("【打印信息报错】:" . $this->order->order_openid);
                         }
-                        //推送模板消息
-                        self::sendTempMsg($this->order->openid, 1, $this->order->order_number);
-                        self::sendTempMsg($this->order->openid, 3, $this->order->order_number);
-                        self::send2Deliveryman($this->order->order_number);
+                        //推送模板消息  union_id未与微信openid打通
+//                        self::sendTempMsg($this->order->order_openid, 1, $this->order->order_number);
+//                        self::sendTempMsg($this->order->order_openid, 3, $this->order->order_number);
+//                        self::send2Deliveryman($this->order->order_number);
                         //此处应该更新一下订单状态，商户自行增删操作
-                        self::logResult("【openid】:" . $this->order->openid);
+                        self::logResult("【order_openid】:" . $this->order->order_openid);
                         self::logResult("【order_number】:" . $this->order->order_number);
                         self::logResult("【支付成功】:" . $xml);
                     } catch (\Exception $e) {
@@ -248,6 +239,10 @@ class Pay extends Controller
             //例如：数据库操作
             //例如：推送支付完成信息
         }
+    }
+
+    public function test(){
+        self::logResult(1);
     }
 
     /**
@@ -283,11 +278,11 @@ class Pay extends Controller
         $app = Factory::officialAccount($config);
         $template_id = '';
         $data = [];
-        $order_info = BusinessToOrders::where(['order_number' => $orderNumber])->find();
-        $business = BusinessAccount::where(['bid' => $order_info['bid']])->find();
+        $order_info = Db::table('order')->where(['order_number' => $orderNumber])->find();
+        $business = Db::table('business_account')->where(['bid' => $order_info['bid']])->find();
         $price = $order_info['total_price'] / 100;
         $total_price_cny = $order_info['total_price_cny'] / 100;
-        $good = BusinessToOrdersGoods::where(['order_number' => $orderNumber])->find();
+        $good = Db::table('order_goods')->where(['order_number' => $orderNumber])->find();
         switch ($type) {
             case 1:
                 $template_id = '1f7cb5Q180yncUHJEMKzeMuEh_fvA1-OB1D_twLB10I';
@@ -346,8 +341,8 @@ class Pay extends Controller
             'response_type' => 'array',
         ];
         $app = Factory::officialAccount($config);
-        $order_info = BusinessToOrders::where(['order_number' => $orderNumber])->find();
-        $business = BusinessAccount::where(['bid' => $order_info['bid']])->find();
+        $order_info = Db::table('order')->where(['order_number' => $orderNumber])->find();
+        $business = Db::table('business_account')->where(['bid' => $order_info['bid']])->find();
         $price = $order_info['total_price'] / 100;
         $total_price_cny = $order_info['total_price_cny'] / 100;
         $time = date('Y-m-d H:i:s', strtotime($order_info['create_time'])+ (20 * 60));
@@ -371,64 +366,4 @@ class Pay extends Controller
         }
     }
 
-
-    public function send2D_test($orderNumber)
-    {
-        $config = [
-            'app_id' => 'wx007296fc9a7d315f',
-            'secret' => '50ddb0815ab75971d407f4218222675c',
-            'response_type' => 'array',
-        ];
-        $app = Factory::officialAccount($config);
-        $order_info = BusinessToOrders::where(['order_number' => $orderNumber])->find();
-        $business = BusinessAccount::where(['bid' => $order_info['bid']])->find();
-        $price = $order_info['total_price'] / 100;
-        $total_price_cny = $order_info['total_price_cny'] / 100;
-        $time = date('Y-m-d H:i:s', strtotime($order_info['create_time'])+ (20 * 60));
-        $dman = Db::table('deliveryman')->field('openid')->select();
-        foreach ($dman as $key) {
-            $temp = [
-                'touser' => $key['openid'],
-                'template_id' => 'Avn8YCqx4SGAyjdq5gcPmDFpMsx6iNQOtvGm1OOQocE',
-                'data' => [
-                    'first' => '订单测试信息,请勿理会',
-                    'keyword1' => $orderNumber,
-                    'keyword2' => "姓名:".$order_info['user_name'] . '  电话:' . $order_info['user_telephone'],
-                    'keyword3' => "地址:".$order_info['user_address'] . '  邮编:' . $order_info['user_post_code'],
-                    'keyword4' => '微信支付：' . $total_price_cny . '元（折合' . $price . '磅）',
-                    'keyword5' => $time,
-                    'remark' => '测试信息,请勿理会',
-                ],
-                "url" => "https://www.szfengyuecheng.com/express/index/index",
-            ];
-            $app->template_message->send($temp);
-        }
-        echo '发送成功';
-    }
-
-    /**
-     * 货到付款
-     */
-    public function extendedPay(){
-        if (!Request::instance()->isPost()) {
-            return json(['errcode' => -1,'errmsg' => '请求错误']);
-        }
-        $orderId = input('post.orderId');
-        if(empty($orderId)){
-            return json(['errcode' => -2,'errmsg' => '订单号为空']);
-        }
-        $order = Db::table('business_to_orders')->where(['order_number' => $orderId])->find();
-        if(empty($order)){
-            return json(['errcode' => -3,'errmsg' => '订单信息不存在']);
-        }
-        if($order['status'] != 0){
-            return json(['errcode' => -4,'errmsg' => '订单已支付无须重复支付']);
-        }
-
-        if(Db::table('business_to_orders')->where(['order_number' => $orderId])->update(['status' => 2])){
-            return json(['errcode' => 0,'errmsg' => 'ok']);
-        }else{
-            return json(['errcode' => -5,'errmsg' => '支付失败']);
-        }
-    }
 }

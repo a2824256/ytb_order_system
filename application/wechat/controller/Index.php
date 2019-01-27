@@ -115,30 +115,4 @@ class Index extends Controller
         return $uid;
     }
 
-    public function sendTempMsg()
-    {
-        $config = [
-            'app_id' => 'wx007296fc9a7d315f',
-            'secret' => '50ddb0815ab75971d407f4218222675c',
-            'response_type' => 'array',
-        ];
-        $app = Factory::officialAccount($config);
-        $accessToken = $app->access_token;
-//        $token = $accessToken->getToken();
-        $res = $app->template_message->send([
-            'touser' => 'ohR9-5g9wak0ss7gjPgbfCVvx5tM',
-            'template_id' => 'Avn8YCqx4SGAyjdq5gcPmDFpMsx6iNQOtvGm1OOQocE',
-            'url' => 'https://www.baidu.com',
-            'data' => [
-                'first' => '订单外送通知',
-                'keyword1' => '123456789',
-                'keyword2' => 'Mr. Leung',
-                'keyword3' => 'moor lane 5-7',
-                'keyword4' => '130',
-                'keyword5' => date("Y-m-d H:i:s"),
-                'remark' => '取货商家：东馆',
-            ],
-        ]);
-        var_dump($res);
-    }
 }

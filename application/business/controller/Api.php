@@ -107,13 +107,15 @@ class Api extends Rest
                     if (!$good->save()) {
                         throw new Exception(6);
                     }
-                    $attributes = input('?post.attribute') ? input('post.attribute') : [];
+                    $gid = $good->getLastInsID();
+                    $attributes = input('?post.attribute') ? json_decode(input('post.attribute'),true) : [];
                     if(!empty($attributes) && is_array($attributes)){
                         foreach($attributes as $attr){
                             $attribute = new BusinessToGoodsAttributes();
                             $attribute->title = $attr['title'];
                             $attribute->price = $attr['price'];
-                            $attribute->gid = $attr['gid'];
+                            $attribute->gid = $gid;
+                            $attribute->pic = '';
                             if(!$attribute->save()){
                                 throw new Exception(6);
                             }
@@ -151,9 +153,10 @@ class Api extends Rest
         switch ($this->method) {
             case 'post':
                 $content = [];
-                if (input('?post.photo')) {
+                if (input('?post.photo')&&(input('post.photo')!=''||input('post.photo')!=null)) {
                     $content = [
                         'pic' => input('post.photo'),
+                        'bg' => input('post.photo1'),
                         'name' => input('post.name'),
                         'phone' => input('post.phone'),
                         'device_id' => input('post.device_id'),
@@ -173,6 +176,7 @@ class Api extends Rest
                         'end_hour' => input('post.end_hour'),
                         'end_min' => input('post.end_min'),
                         'cpc' => input('post.cpc'),
+                        'bg' => input('post.photo1')
                     ];
                 }
                 $business = new BusinessAccount();
@@ -187,4 +191,5 @@ class Api extends Rest
                 }
         }
     }
+
 }

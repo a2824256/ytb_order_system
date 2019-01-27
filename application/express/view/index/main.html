@@ -2,84 +2,212 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
-    <link rel="stylesheet" href="http://i.gtimg.cn/vipstyle/frozenui/2.0.0/css/frozen.css">
-    <title>Title</title>
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
+    <link rel="stylesheet" href="https://i.gtimg.cn/vipstyle/frozenui/2.0.0/css/frozen.css">
+    <!--<link rel="stylesheet" href="__STATIC__/css/weui.css">-->
+    <!--<link rel="stylesheet" href="__STATIC__/css/example.css">-->
+    <title>订单列表</title>
 </head>
-<body style="background-size:cover;font-size: 16px;color: #fff;">
-<div style="width: 100%;height: 40px;background: black;color: #fff;text-align: center;line-height: 40px;">订单</div>
-<div style="background: white">
-    <div class=" ">
-        <div class=" " style="margin-bottom: 400px">
-            {volist name="list" id="vo"}
-            <table width="100%" style="text-align: left">
-                <tr style="border:1px solid #afafaf;">
-                    <td height="40px">
-                        <h4 style="color: #666666">订单号:{$vo.order_number}</h4>
-                    </td>
-                </tr>
-                <tr style="border:1px solid #afafaf;">
-                    <td height="40px">
-                        <h4 style="color: #666666">姓名:{$vo.user_name}</h4>
-                    </td>
-                </tr>
-                <tr style="border:1px solid #afafaf;">
-                    <td height="40px">
-                        <h4 style="color: #666666">手机:{$vo.user_telephone}</h4>
-                    </td>
-                </tr>
-                <tr style="border:1px solid #afafaf;">
-                    <td height="40px">
-                        <h4 style="color: #666666">地址:{$vo.user_address}</h4>
-                    </td>
-                </tr>
-                <tr style="border:1px solid #afafaf;">
-                    <td height="40px">
-                        <h4 style="color: #666666">邮编:{$vo.user_post_code}</h4>
-                    </td>
-                </tr>
-                <tr style="border:1px solid #afafaf;">
-                    <td height="40px">
-                        <h4 style="color: #666666">时间:{$vo.create_time}</h4>
-                    </td>
-                </tr>
-                <tr id="del_{$vo.oid}">
-                    <td>
-                        <input type="hidden" value="{$vo.step}" id="step_{$vo.oid}" />
-                        {eq name="$vo.step" value="1" }
-                        <button class="ui-btn-lg ui-btn-primary btn_{$vo.oid}" onclick="jump('{$vo.oid}')">取 餐</button>
-                        {/eq}
-                        {eq name="$vo.step" value="3" }
-                        <button class="ui-btn-lg ui-btn-primary btn_{$vo.oid}" onclick="jump('{$vo.oid}')">送 达</button>
-                        {/eq}
-                    </td>
-                </tr>
-            </table>
-            {/volist}
+<style>
+    div.menu ul
+    {
+        list-style:none; /* 去掉ul前面的符号 */
+        margin: 0px; /* 与外界元素的距离为0 */
+        padding: 0px; /* 与内部元素的距离为0 */
+        width: auto; /* 宽度根据元素内容调整 */
+    }
+    /* 所有class为menu的div中的ul中的li样式 */
+    div.menu ul li
+    {
+        float:left; /* 向左漂移，将竖排变为横排 */
+    }
+    /* 所有class为menu的div中的ul中的a样式(包括尚未点击的和点击过的样式) */
+    div.menu ul li a, div.menu ul li a:visited
+    {
+        background-color: #465c71; /* 背景色 */
+        border: 1px #4e667d solid; /* 边框 */
+        color: #dde4ec; /* 文字颜色 */
+        display: block; /* 此元素将显示为块级元素，此元素前后会带有换行符 */
+        line-height: 1.35em; /* 行高 */
+        padding: 4px 20px; /* 内部填充的距离 */
+        text-decoration: none; /* 不显示超链接下划线 */
+        white-space: nowrap; /* 对于文本内的空白处，不会换行，文本会在在同一行上继续，直到遇到 <br> 标签为止。 */
+    }
+    /* 所有class为menu的div中的ul中的a样式(鼠标移动到元素中的样式) */
+    div.menu ul li span
+    {
+        background-color: #465c71; /* 背景色 */
+        border: 1px #4e667d solid; /* 边框 */
+        color: #7a7e82; /* 文字颜色 */
+        display: block; /* 此元素将显示为块级元素，此元素前后会带有换行符 */
+        line-height: 1.35em; /* 行高 */
+        padding: 4px 20px; /* 内部填充的距离 */
+        text-decoration: none; /* 不显示超链接下划线 */
+        white-space: nowrap; /* 对于文本内的空白处，不会换行，文本会在在同一行上继续，直到遇到 <br> 标签为止。 */
+    }
+    /* 所有class为menu的div中的ul中的a样式(鼠标点击元素时的样式) */
+    div.menu ul li a:active
+    {
+        background-color: #465c71; /* 背景色 */
+        color: #cfdbe6; /* 文字颜色 */
+        text-decoration: none; /* 不显示超链接下划线 */
+    }
+</style>
+<body>
+<section class="ui-container">
+    <div class="index-wrap">
+        <!--<div class="ui-panel ui-panel-center ui-border-tb">-->
+            <!--<h3 class="">-->
+                <!--订单列表-->
+            <!--</h3>-->
+        <!--</div>-->
+        {volist name="list" id="vo"}
+        <ul class="ui-list ui-list-single ui-border-tb">
+            <li class="ui-border-t">
+                <div class="ui-list-info">
+                    <h4 class="ui-nowrap">
+                        订单号:
+                    </h4>
+                    <div class="ui-txt-info">
+                        {$vo.order_number}
+                    </div>
+                </div>
+            </li>
+            <li class="ui-border-t">
+                <div class="ui-list-info">
+                    <h4 class="ui-nowrap">
+                        订单状态:
+                    </h4>
+                    <div class="ui-txt-info">
+                        {eq name="$vo.step" value="0" }等待商家确认中{/eq}
+                        {eq name="$vo.step" value="1" }商家已确认{/eq}
+                        {eq name="$vo.step" value="2" }商家取消{/eq}
+                        {eq name="$vo.step" value="3" }骑手已取餐{/eq}
+                        {eq name="$vo.step" value="4" }骑手已送达{/eq}
+                        {eq name="$vo.step" value="5" }用户取消{/eq}
+                        {eq name="$vo.step" value="6" }用户已评价{/eq}
+                    </div>
+                </div>
+            </li>
+            <li class="ui-border-t">
+                <div class="ui-list-info">
+                    <h4 class="ui-nowrap">
+                        姓名:
+                    </h4>
+                    <div class="ui-txt-info">
+                        {$vo.user_name}
+                    </div>
+                </div>
+            </li>
+            <li class="ui-border-t">
+                <div class="ui-list-info">
+                    <h4 class="ui-nowrap">
+                        手机:
+                    </h4>
+                    <div class="ui-txt-info">
+                        <a href="tel:{$vo.user_telephone|preg_replace='# #','',###}" style="text-decoration: none;">{$vo.user_telephone|preg_replace='# #','',###}</a>
+                    </div>
+                </div>
+            </li>
+            <li class="ui-border-t">
+                <div class="ui-list-info">
+                    <h4 class="ui-nowrap">
+                        地址:
+                    </h4>
+                    <div class="ui-txt-info">
+                        {$vo.user_address}
+                    </div>
+                </div>
+            </li>
+            <li class="ui-border-t">
+                <div class="ui-list-info">
+                    <h4 class="ui-nowrap">
+                        邮编:
+                    </h4>
+                    <div class="ui-txt-info">
+                        {$vo.user_post_code|strtoupper}
+                    </div>
+                </div>
+            </li>
+            <li class="ui-border-t">
+                <div class="ui-list-info">
+                    <h4 class="ui-nowrap">
+                        时间:
+                    </h4>
+                    <div class="ui-txt-info">
+                        {$vo.create_time}
+                    </div>
+                </div>
+            </li>
+            <li class="ui-border-t">
+                <div class="ui-list-info">
+                    <h4 class="ui-nowrap">
+                        商家:
+                    </h4>
+                    <div class="ui-txt-info" style="color: #ff2332">
+                        {$vo.bussiness_name}
+                    </div>
+                </div>
+            </li>
+        </ul>
+        <div class="ui-panel ui-panel-center ui-border-tb">
+            <h3 class="">
+                操作
+            </h3>
+        </div>
+        <div style="padding: 10px 10px;" >
+            <div id="del_{$vo.oid}">
+                <input type="hidden" value="{$vo.step}" id="step_{$vo.oid}"/>
+                {eq name="$vo.step" value="1" }
+                <button class="ui-btn-lg ui-btn-primary btn_{$vo.oid}" onclick="jump('{$vo.oid}')">取 餐</button>
+                {/eq}
+                {eq name="$vo.step" value="3" }
+                <button class="ui-btn-lg ui-btn-primary btn_{$vo.oid}" onclick="jump('{$vo.oid}')">送 达</button>
+                {/eq}
+                <br/>
+            </div>
+        </div>
+        {/volist}
+        <div class="menu" style="display: flex;flex-direction: row;width: 100%;margin: auto;
+        *text-align: center;">
             {$list->render()}
         </div>
+        <div style="height:60px;"></div>
+    </div>
+</section>
+<div id="loadingToast" style="display:none;">
+    <div class="weui-mask_transparent"></div>
+    <div class="weui-toast">
+        <i class="weui-loading weui-icon_toast"></i>
+        <p class="weui-toast__content">正在处理中</p>
     </div>
 </div>
-<script src="__STATIC__/js/jquery.min.js" ></script>
+<script src="__STATIC__/js/jquery.min.js"></script>
+<!--<script src="__STATIC__/js/example.js"></script>-->
+<!--<script src="__STATIC__/js/zepto.min.js"></script>-->
 <script>
     var url = "{:url('express/Form/updateOrder')}";
+
     function jump(id) {
-        var step = $('#step_'+id).val();
+        $('#loadingToast').show();
+        var step = $('#step_' + id).val();
         $.ajax({
             type: "POST",
-            url:  url,
-            data: {id:id,step:step},// 你的formid
+            url: url,
+            data: {id: id, step: step},// 你的formid
             async: false,
-            success: function(result) {
+            success: function (result) {
+                $('#loadingToast').hide();
                 console.log(result);
-                if(result.errcode == 0){
-                    $('#step_'+id).val(result.data);
-                    if(result.data == 3){
-                        $('.btn_'+id).html('送 达');
-                    }else{
-                        $('#del_'+id).empty();
+                if (result.errcode == 0) {
+                    $('#step_' + id).val(result.data);
+                    if (result.data == 3) {
+                        $('.btn_' + id).html('送 达');
+                    } else {
+                        $('#del_' + id).empty();
                     }
-                }else{
+                } else {
                     alert(result.errmsg);
                 }
             }

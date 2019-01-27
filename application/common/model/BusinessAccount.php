@@ -12,4 +12,5 @@ use think\Model;
 class BusinessAccount extends Model
 {
     protected $pk = 'bid';
+    protected $autoWriteTimestamp = 'datetime';
 }

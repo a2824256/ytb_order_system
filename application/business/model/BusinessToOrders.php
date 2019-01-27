@@ -14,7 +14,7 @@ class BusinessToOrders extends Model
     public function getStatusAttr($value)
     {
         //TODO 字段需调整
-        $status = [0=>'User canceled.',1=>'Business confirmed.',2=>'Business canceled.',3=>'Completed.'];
+        $status = [0=>'Unpaid.',1=>'WeChat payment.',2=>'Cash on delivery.'];
         return $status[$value];
     }
 }

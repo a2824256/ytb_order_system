@@ -33,7 +33,8 @@ class Index extends Controller
     public function main()
     {
         $orders = BusinessToOrders::where(['create_time'=>date("Y-m-d H:i:s")."%"])->count();
-        $rec = BusinessToOrders::where(['create_time'=>date("Y-m-d H:i:s")."%",'status'=>1])->sum('total_price');
+        $rec = BusinessToOrders::where(['create_time'=>date("Y-m-d H:i:s")."%"])
+            ->where("status" ,'in' ,'1,2')->sum('total_price');
         $view = new View();
         $view->orders = $orders;
         $view->rec = $rec;
@@ -84,7 +85,7 @@ class Index extends Controller
         $key = input('post.key');
         $orders = null;
         if (!empty($key)) {
-            $orders = BusinessToOrders::where(['status' => 1])
+            $orders = BusinessToOrders::where('status','in','1,2')
                 ->whereOr('order_number', 'like', '%' . $key . '%')
                 ->whereOr('total_price', 'like', '%' . $key . '%')
                 ->whereOr('user_name', 'like', '%' . $key . '%')
@@ -95,7 +96,7 @@ class Index extends Controller
                 ->order('oid desc')
                 ->paginate(10);
         } else {
-            $orders = BusinessToOrders::where(['bid' => $bid,'status' => 1])->order('oid desc')->field('step,oid,order_number,total_price,status,user_name,user_telephone,create_time')->paginate(10);
+            $orders = BusinessToOrders::where(['bid' => $bid])->where('status','in','1,2')->order('oid desc')->field('step,oid,order_number,total_price,status,user_name,user_telephone,create_time')->paginate(10);
         }
         foreach($orders as &$val){
             $val['total_price'] = $val['total_price'] / 100;
@@ -108,7 +109,7 @@ class Index extends Controller
     public function autoGetData(){
         $oid = input('get.oid');
         $result = [];
-        $newData = BusinessToOrders::where('oid','>',$oid)->join('business_to_orders_goods','business_to_orders_goods.order_number = business_to_orders.order_number')->where(['step' => 0,'status' => 1])->field('business_to_orders.*,business_to_orders_goods.good_name,business_to_orders_goods.num,business_to_orders_goods.price,business_to_orders_goods.total_price as goods_total_price')->select();
+        $newData = BusinessToOrders::where('oid','>',$oid)->join('business_to_orders_goods','business_to_orders_goods.order_number = business_to_orders.order_number')->where(['step' => 0])->where('status','in','1,2')->field('business_to_orders.*,business_to_orders_goods.good_name,business_to_orders_goods.num,business_to_orders_goods.price,business_to_orders_goods.total_price as goods_total_price')->select();
         foreach($newData as $val){
             if(array_key_exists($val['order_number'],$result)){
                 $data = [
@@ -151,7 +152,7 @@ class Index extends Controller
     public function business()
     {
         $bid = Session::get('bid');
-        $info = BusinessAccount::where(['bid' => $bid])->field('name,pic,phone,device_id,start_hour,start_min,end_hour,end_min,cpc,dp')->find();
+        $info = BusinessAccount::where(['bid' => $bid])->field('name,pic,phone,device_id,start_hour,start_min,end_hour,end_min,cpc,dp,bg')->find();
         $view = new View();
         $view->info = $info;
         return $view->fetch();

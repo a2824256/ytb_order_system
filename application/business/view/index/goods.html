@@ -105,8 +105,13 @@
                             <label style="width: 100px;">Info:</label>
                             <textarea id="info" class="form-control" rows="5" style="width: 300px;resize:none"></textarea>
                         </div>
+
                         <input id="bid" type="hidden" value="{$Think.session.bid}" />
-                        <input type="button" onclick="addGoods()" class="btn btn-success" value="Submit" style="margin-left: 100px;"/>
+                        <input type="button" onclick="addAttribute()" class="btn btn-primary" value="ADD Attribute" style="margin-left: 100px;"/><br/>
+                        <div id="region_attribute" class="form-inline form-group" ></div>
+                        <div style="clear: both;">
+                        <input type="button" onclick="addGoods()" class="btn btn-success" value="Submit" style="margin-left: 100px;clear:both;"/>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -139,10 +144,20 @@
             return;
         }
     }
+
 </script>
 <script src="/static/js/common.js"></script>
 <script>
     function addGoods() {
+        var attrArray = [];
+        $('#region_attribute').find('.temp').each(function() {
+            var temp = {
+                price:  $(this).find(':text')[0].value,
+                title: $(this).find(':text')[1].value,
+            };
+            attrArray.push(temp);
+        })
+
         let params = new Array();
         params['photo'] = document.getElementById("photo").value;
         params['name'] = document.getElementById("name").value;
@@ -150,16 +165,39 @@
         params['price'] = document.getElementById("price").value;
         params['info'] = document.getElementById("info").value;
         params['cid'] = document.getElementById("cid").value;
-        console.log(params);
+        params['attribute'] = JSON.stringify(attrArray);
+        // console.log(params);return;
         let res_arr = request('{:url("business/api/goods")}', params, 'post');
         res_arr.then((res)=>{
-            if (res.code == 1) {
+            if (res.status == 1) {
                 alert(res.reason);
                 location.reload();
             } else {
                 alert(res.reason);
             }
         });
+    }
+    
+    function addAttribute() {
+        var number = $('#region_attribute > div').length;
+        var price = "attribute["+number+"]['price']";
+        var title = "attribute["+number+"]['title']";
+        var sty = '<div class="at_'+number+' temp">' +
+                '<div style="float:left;border: 1px solid #cccccc;width: 300px;height: 85px;margin-left: 100px;margin-bottom: 10px;">' +
+                '<label style="margin:10px;">Attribute Price:</label>&nbsp;<input class="form-control"  data-key = '+number+' data-type = "price" type="text" name="'+price+'">' +
+                '<label style="margin:10px">Attribute Name:</label><input class="form-control"  data-key = '+number+' data-type = "name" type="text" name="'+title+'">' +
+                '</div>' +
+                '<button class="btn btn-danger" onclick="deleteAttribute('+number+')" style="float:left;border-radius: 50%;width: 32px;height: 32px;margin: 25px;"><label style="font-size: 25px;margin-top: -11px; margin-left: -7px;">x</label></button>' +
+                '</div>';
+        $('#region_attribute').append(sty);
+        var h = $('.right_col').css('min-height');
+        $('.right_col').css('min-height',parseInt(h.substring(0,4)) + 90);
+    }
+
+    function deleteAttribute(number){
+        $('.at_'+number).remove();
+        var h = $('.right_col').css('min-height');
+        $('.right_col').css('min-height',parseInt(h.substring(0,4)) - 90);
     }
 </script>
 <script src="/static/kindeditor/kindeditor-all.js"></script>
